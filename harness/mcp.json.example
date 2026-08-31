@@ -1,0 +1,29 @@
+{
+  "mcpServers": {
+    "superthread": {
+      "url": "https://mcp.superthread.com/mcp",
+      "headers": {
+        "Authorization": "Bearer <SUPERTHREAD_TOKEN>"
+      }
+    },
+    "posthog": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote@latest", "https://mcp.posthog.com/mcp"],
+      "env": {
+        "POSTHOG_PERSONAL_API_KEY": "<POSTHOG_PERSONAL_API_KEY>",
+        "POSTHOG_REGION": "eu"
+      }
+    },
+    "codebase-memory-mcp": {
+      "command": "/Users/<you>/.local/bin/codebase-memory-mcp"
+    },
+    "codegraph": {
+      "command": "codegraph",
+      "args": ["serve", "--mcp"]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "<PROJECT_ROOT>"]
+    }
+  }
+}

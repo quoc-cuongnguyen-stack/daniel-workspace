@@ -1,0 +1,14 @@
+node_modules/
+.pnpm-store/
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+tmp/
+temp/
+.serena/
+.codegraph/
+workspace/qa-agent/test-results/
+workspace/qa-agent/playwright-report/
+workspace/local_tracing/data/

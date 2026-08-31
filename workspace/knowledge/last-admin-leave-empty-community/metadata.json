@@ -1,0 +1,8 @@
+{
+  "title": "Last-staff leave: tombstone, fail-closed counts, authorized-id writes",
+  "bugId": "BUG-136",
+  "status": "fixed",
+  "dateFixed": "2026-08-31",
+  "packages": ["ssl-be", "ssl-fe-user"],
+  "tags": ["community", "membership", "moderator", "createdById"]
+}

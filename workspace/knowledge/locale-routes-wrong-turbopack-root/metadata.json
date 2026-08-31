@@ -1,0 +1,8 @@
+{
+  "title": "Pin turbopack.root to ssl-fe-user",
+  "bugId": "BUG-101",
+  "status": "fixed",
+  "dateFixed": "2026-08-31",
+  "packages": ["ssl-fe-user"],
+  "tags": ["next", "turbopack", "locale", "dev-server"]
+}

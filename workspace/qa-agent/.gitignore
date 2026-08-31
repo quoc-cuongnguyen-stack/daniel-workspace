@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Playwright artifacts & reports
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Local Environment variables (contains real credentials)
+.env
+.env.local
+.env.*.local
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo

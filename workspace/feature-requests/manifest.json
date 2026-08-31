@@ -1,0 +1,204 @@
+{
+  "manifest_version": "fr-manifest@2",
+  "skill_id": "feature-request-author",
+  "template_version": "engineering-spec 11-section (cyberos FR-CLICK style)",
+  "project": "CyberSkill/ssl",
+  "modules": [
+    "VISIT",
+    "CHAT",
+    "GUEST",
+    "AGEV",
+    "COMM"
+  ],
+  "output_dir": "docs/feature-requests/",
+  "naming_pattern": "<module>/FR-<MODULE>-<NNN>-<slug>.md",
+  "created": "2026-06-29",
+  "owner": "Stephen Cheng",
+  "source_decisions": "DECISIONS.md",
+  "plan": {
+    "status": "APPROVED",
+    "scope": "5 in-scope round-1 features -> 8 FRs; Phase 2 items (map/MapTiler, private+approval, points, themes, full in-community admin) named as non-goals"
+  },
+  "coherence": {
+    "checked": true,
+    "dependency_cycles": 0,
+    "dangling_references": 0,
+    "reciprocity_errors": 0,
+    "slice_order_ok": true,
+    "checked_on": "2026-06-29"
+  },
+  "totals": {
+    "frs": 8,
+    "all_ready_to_implement": true,
+    "min_audit_score": "9.0/10",
+    "release1_hours": 58,
+    "release2_hours": 88,
+    "total_hours": 146
+  },
+  "releases": {
+    "R1_quick_wins": [
+      "FR-AGEV-001",
+      "FR-CHAT-001",
+      "FR-GUEST-001",
+      "FR-VISIT-001"
+    ],
+    "R2_communities_mvp": [
+      "FR-COMM-001",
+      "FR-COMM-002",
+      "FR-COMM-003",
+      "FR-COMM-004"
+    ]
+  },
+  "build_order": [
+    "FR-AGEV-001",
+    "FR-CHAT-001",
+    "FR-GUEST-001",
+    "FR-VISIT-001",
+    "FR-COMM-001",
+    "FR-COMM-002",
+    "FR-COMM-003",
+    "FR-COMM-004"
+  ],
+  "prerequisites": [
+    "ssl-be: add E_UploadEntity.COMMUNITY (FR-COMM-001)",
+    "ssl-be: add E_TagType.COMMUNITY (FR-COMM-004)",
+    "client: deliver age-verify multilingual banner + CTA copy (FR-AGEV-001)"
+  ],
+  "artefacts": [
+    {
+      "id": "FR-AGEV-001",
+      "module": "AGEV",
+      "path": "age-verify/FR-AGEV-001-age-verification-overlay.md",
+      "status": "ready_to_implement",
+      "audit_score": "9.5/10",
+      "verdict": "PASS (after revision)",
+      "priority": "MUST",
+      "phase": "R1",
+      "slice": 1,
+      "effort_hours": 10,
+      "service": "ssl-be + ssl-fe-user",
+      "depends_on": [],
+      "blocks": []
+    },
+    {
+      "id": "FR-CHAT-001",
+      "module": "CHAT",
+      "path": "chat/FR-CHAT-001-message-edit-delete-media.md",
+      "status": "ready_to_implement",
+      "audit_score": "9.5/10",
+      "verdict": "PASS",
+      "priority": "MUST",
+      "phase": "R1",
+      "slice": 1,
+      "effort_hours": 16,
+      "service": "ssl-be + ssl-fe-user",
+      "depends_on": [],
+      "blocks": []
+    },
+    {
+      "id": "FR-COMM-001",
+      "module": "COMM",
+      "path": "community/FR-COMM-001-community-core.md",
+      "status": "ready_to_implement",
+      "audit_score": "9.5/10",
+      "verdict": "PASS (after revision)",
+      "priority": "MUST",
+      "phase": "R2",
+      "slice": 2,
+      "effort_hours": 28,
+      "service": "ssl-be + ssl-fe-user",
+      "depends_on": [],
+      "blocks": [
+        "FR-COMM-002",
+        "FR-COMM-003",
+        "FR-COMM-004"
+      ]
+    },
+    {
+      "id": "FR-COMM-002",
+      "module": "COMM",
+      "path": "community/FR-COMM-002-community-feed.md",
+      "status": "ready_to_implement",
+      "audit_score": "9.5/10",
+      "verdict": "PASS (after revision)",
+      "priority": "MUST",
+      "phase": "R2",
+      "slice": 2,
+      "effort_hours": 30,
+      "service": "ssl-be + ssl-fe-user",
+      "depends_on": [
+        "FR-COMM-001"
+      ],
+      "blocks": [
+        "FR-COMM-003",
+        "FR-COMM-004"
+      ]
+    },
+    {
+      "id": "FR-COMM-003",
+      "module": "COMM",
+      "path": "community/FR-COMM-003-members-online-notifications.md",
+      "status": "ready_to_implement",
+      "audit_score": "9.5/10",
+      "verdict": "PASS (after revision)",
+      "priority": "MUST",
+      "phase": "R2",
+      "slice": 2,
+      "effort_hours": 14,
+      "service": "ssl-be + ssl-fe-user",
+      "depends_on": [
+        "FR-COMM-001",
+        "FR-COMM-002"
+      ],
+      "blocks": []
+    },
+    {
+      "id": "FR-COMM-004",
+      "module": "COMM",
+      "path": "community/FR-COMM-004-community-admin.md",
+      "status": "ready_to_implement",
+      "audit_score": "9.0/10",
+      "verdict": "PASS (after revision)",
+      "priority": "MUST",
+      "phase": "R2",
+      "slice": 2,
+      "effort_hours": 16,
+      "service": "ssl-fe-admin + ssl-be",
+      "depends_on": [
+        "FR-COMM-001",
+        "FR-COMM-002"
+      ],
+      "blocks": []
+    },
+    {
+      "id": "FR-GUEST-001",
+      "module": "GUEST",
+      "path": "guestbook/FR-GUEST-001-guestbook-paid-gating-owner-moderation.md",
+      "status": "ready_to_implement",
+      "audit_score": "9.5/10",
+      "verdict": "PASS (after revision)",
+      "priority": "MUST",
+      "phase": "R1",
+      "slice": 1,
+      "effort_hours": 12,
+      "service": "ssl-be + ssl-fe-user",
+      "depends_on": [],
+      "blocks": []
+    },
+    {
+      "id": "FR-VISIT-001",
+      "module": "VISIT",
+      "path": "visit/FR-VISIT-001-profile-visit-center.md",
+      "status": "ready_to_implement",
+      "audit_score": "9.5/10",
+      "verdict": "PASS",
+      "priority": "MUST",
+      "phase": "R1",
+      "slice": 1,
+      "effort_hours": 20,
+      "service": "ssl-be + ssl-fe-user",
+      "depends_on": [],
+      "blocks": []
+    }
+  ]
+}

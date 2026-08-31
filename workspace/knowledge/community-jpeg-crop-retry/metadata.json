@@ -1,0 +1,8 @@
+{
+  "title": "Community JPEG crop needed several attempts",
+  "bugId": "BUG-137",
+  "status": "fixed",
+  "dateFixed": "2026-08-31",
+  "packages": ["ssl-fe-user", "ssl-be"],
+  "tags": ["community", "upload", "jpeg", "crop", "wizard"]
+}
