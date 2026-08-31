@@ -1,6 +1,11 @@
 {
+    "name": "cursor-sdk-scratch",
     "private": true,
     "type": "module",
+    "scripts": {
+        "start": "node --experimental-strip-types index.ts",
+        "typecheck": "tsc --noEmit"
+    },
     "devDependencies": {
         "@types/node": "25.5.0",
         "typescript": "5.9.3"
