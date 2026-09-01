@@ -54,13 +54,23 @@ export function createTools(cwd: string): Record<string, SDKCustomTool> {
 
   const grep = tool({
     description: `Search file contents using regex. Returns matching lines with file paths.
-WHEN TO USE: finding patterns across multiple files, locating function definitions,
-  searching for imports, finding TODOs or error messages.
-WHEN NOT TO USE: reading a known file (use read instead).
-DO NOT USE FOR: running commands, listing directories.
-EXAMPLES:
-  - Find all TODO comments: pattern "TODO" glob "*.ts"
-  - Find function definitions: pattern "function \\\\w+" glob "*.ts"`,
+ 
+    WHEN TO USE: finding patterns across multiple files, locating function definitions,
+    searching for imports, finding TODOs or error messages.
+    
+    WHEN NOT TO USE: reading a known file (use read instead).
+    Running commands (use bash instead).
+    
+    DO NOT USE FOR: reading files (use read), listing directories (use bash),
+    modifying files (use edit).
+    
+    USAGE: pattern is a regex string. glob filters by file extension.
+    Results are capped at 50 matches.
+    
+    EXAMPLES:
+    - Find all TODO comments: pattern "TODO" glob "*.ts"
+    - Find function definitions: pattern "function \\w+" glob "*.ts"
+    - Find imports of a package: pattern "from 'express'" glob "*.ts"`,
     inputSchema: z.object({
       pattern: z.string().describe("Regex or fixed text to search for"),
       path: z.string().optional().describe("Directory or file relative to working directory (default: .)"),
@@ -103,16 +113,16 @@ EXAMPLES:
 
   const read = tool({
     description: `Read a file from the project. Returns numbered lines.
- 
+    
     WHEN TO USE: viewing file contents, checking configurations, reading source code,
     examining specific lines with offset/limit.
- 
+    
     WHEN NOT TO USE: searching for patterns across files (use grep instead).
     Running commands (use bash instead).
-
+    
     DO NOT USE FOR: searching code (use grep), executing commands (use bash),
     modifying files (use edit or write).
-
+    
     USAGE: path is relative to working directory. offset and limit are optional.
     Output is capped at 500 lines.`,
 
