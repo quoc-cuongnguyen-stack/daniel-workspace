@@ -3,14 +3,15 @@ import { readFileSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 import type { SDKCustomTool } from "@cursor/sdk";
 import { z } from "zod";
+import { createApproval } from "./approval.ts";
 import { createBashTool, createLocalOps } from "./bash.ts";
-import { SAFE_PREFIXES } from "./is-safe.ts";
 import { shQuote } from "./sh-quote.ts";
 import { tool } from "./tool.ts";
 
 export function createTools(cwd: string): Record<string, SDKCustomTool> {
   const localOps = createLocalOps(cwd);
-  const bash = createBashTool(localOps, SAFE_PREFIXES);
+  const bash = createBashTool(localOps, createApproval({ mode: "interactive" }));
+  
 
   const grep = tool({
     description: `Search file contents using regex. Returns matching lines with file paths.
@@ -118,3 +119,4 @@ export function createTools(cwd: string): Record<string, SDKCustomTool> {
 
   return { read, grep, bash };
 }
+
