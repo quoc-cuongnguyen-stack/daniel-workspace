@@ -1,6 +1,7 @@
 import { Agent, type ConversationStep, type Run, type SDKCustomTool } from "@cursor/sdk";
 import { resolve } from "node:path";
 import { createTools } from "./lib/tools.ts";
+import { buildSystemPrompt } from "./lib/system-prompt.ts";
 
 const cwd = resolve(process.argv[2] || process.cwd());
 
@@ -57,23 +58,22 @@ class ToolLoopAgent {
     }
   }
 }
+const tools = createTools(cwd);
+
+const instructions = buildSystemPrompt({
+  workingDirectory: cwd,
+  sandboxType: "local",
+  toolNames: Object.keys(tools),
+});
+console.log(instructions);
 
 const agent = new ToolLoopAgent({
   model: "claude-haiku-4-5",
-  instructions: `You are a coding agent working in: ${cwd}
-  # Agency
-  - USE your tools. Read files, search code, run commands, then answer.
-  - Do NOT explain what you WOULD do. Actually do it.
-  - Prefer grep for searching, read for viewing files.
-  - Use bash only for commands that aren't covered by other tools.
-
-  # Guardrails
-  - Prefer simple, minimal changes
-  - Search before creating, and reuse existing patterns
-  - No new dependencies without asking`,
-  tools: createTools(cwd),
+  instructions,
+  tools,
   stopWhen: stepCountIs(10),
 });
+
 
 const prompt = process.argv.slice(3).join(" ") || "Hello!";
 const { text, steps } = await agent.generate({ prompt });

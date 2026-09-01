@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import { z } from "zod";
-import type { ApprovalGate } from "./approval.ts";
+import type { ApprovalGate } from "./mode-approval.ts";
 import { tool } from "./tool.ts";
 
 export type BashOperations = {

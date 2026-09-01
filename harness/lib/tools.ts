@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 import type { SDKCustomTool } from "@cursor/sdk";
 import { z } from "zod";
-import { createApproval } from "./approval.ts";
+import { createApproval } from "./mode-approval.ts";
 import { createBashTool, createLocalOps } from "./bash.ts";
 import { shQuote } from "./sh-quote.ts";
 import { tool } from "./tool.ts";
@@ -15,7 +15,7 @@ export function createTools(cwd: string): Record<string, SDKCustomTool> {
 
   const grep = tool({
     description: `Search file contents using regex. Returns matching lines with file paths.
- 
+
     WHEN TO USE: finding patterns across multiple files, locating function definitions,
     searching for imports, finding TODOs or error messages.
     
