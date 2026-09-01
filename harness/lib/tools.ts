@@ -3,54 +3,14 @@ import { readFileSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 import type { SDKCustomTool } from "@cursor/sdk";
 import { z } from "zod";
-import { isSafe, SAFE_PREFIXES } from "./is-safe.ts";
+import { createBashTool, createLocalOps } from "./bash.ts";
+import { SAFE_PREFIXES } from "./is-safe.ts";
 import { shQuote } from "./sh-quote.ts";
 import { tool } from "./tool.ts";
 
 export function createTools(cwd: string): Record<string, SDKCustomTool> {
-  const bash = tool({
-    description: `Execute a shell command in the working directory.
-
-    WHEN TO USE: running build commands, installing packages, running tests,
-    git operations, directory listings.
-    
-    WHEN NOT TO USE: reading file contents (use read instead).
-    Searching for patterns (use grep instead).
-    
-    DO NOT USE FOR: reading files (use read), searching code (use grep).
-    
-    USAGE: command is a single shell string. Commands not in the safe-prefix
-    allowlist are blocked and return a clear error message.
-    
-    EXAMPLES:
-    - List files: command "ls -la"
-    - Check git status: command "git status"
-    - Run a test suite: command "npm test"`,
-
-    inputSchema: z.object({
-      command: z.string().describe("Full shell command, e.g. ls -la"),
-    }),
-    execute: async ({ command }) => {
-      console.error(`[tool] bash execute command=${command}`);
-      if (!isSafe(command)) {
-        return `Blocked: ${command}\nAllowed prefixes: ${SAFE_PREFIXES.join(", ")}`;
-      }
-      try {
-        return execSync(command, {
-          cwd,
-          encoding: "utf8",
-          timeout: 15_000,
-          maxBuffer: 1_000_000,
-          stdio: ["ignore", "pipe", "pipe"],
-        });
-      } catch (err) {
-        const failure = err as { status?: number; stdout?: string; stderr?: string; killed?: boolean };
-        if (failure.killed) return "(bash timed out)";
-        const out = `${failure.stdout ?? ""}${failure.stderr ?? ""}`.trim();
-        return out || `exit ${failure.status ?? "unknown"}`;
-      }
-    },
-  });
+  const localOps = createLocalOps(cwd);
+  const bash = createBashTool(localOps, SAFE_PREFIXES);
 
   const grep = tool({
     description: `Search file contents using regex. Returns matching lines with file paths.
