@@ -1,5 +1,6 @@
 import { execSync } from "node:child_process";
 import { z } from "zod";
+import type { ApprovalGate } from "./approval.ts";
 import { tool } from "./tool.ts";
 
 export type BashOperations = {
@@ -37,15 +38,13 @@ export function createLocalOps(cwd: string): BashOperations {
   };
 }
 
-export function createBashTool(
-  operations: BashOperations,
-  needsApproval: (input: { command: string }) => boolean,
-) {
+export function createBashTool(operations: BashOperations, gate: ApprovalGate) {
   return tool({
     description: `Execute a shell command in the working directory.
  
 WHEN TO USE: running build commands, installing packages, running tests,
-  git operations, directory listings.
+  git operations, directory listings. Command "trust --list" prints the
+  always-allowed prefixes and this session's approved commands.
  
 WHEN NOT TO USE: reading file contents (use read instead).
   Searching for patterns (use grep instead).
@@ -58,10 +57,17 @@ USAGE: command is a single shell string. Commands not approved by the
       command: z.string().describe("Shell command to execute"),
     }),
     execute: async ({ command }) => {
-      if (needsApproval({ command })) {
-        return `Blocked: "${command}" requires approval.`;
+      const cmd = command.trim();
+      if (cmd === "trust --list") {
+        return gate.formatTrustList();
       }
-      const { stdout } = await operations.exec(command);
+      if (gate.needsApproval({ command: cmd })) {
+        const allowed = await gate.tryApprove(cmd);
+        if (!allowed) {
+          return `Blocked: "${cmd}" requires approval.`;
+        }
+      }
+      const { stdout } = await operations.exec(cmd);
       return stdout || "(no output)";
     },
   });

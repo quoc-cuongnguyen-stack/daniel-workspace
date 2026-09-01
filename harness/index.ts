@@ -60,7 +60,17 @@ class ToolLoopAgent {
 
 const agent = new ToolLoopAgent({
   model: "claude-haiku-4-5",
-  instructions: `You are a coding agent.\nWorking directory: ${cwd}\nSearch with grep. Open a named file with read. List dirs / pwd / git status|log|diff with bash. Never use builtin shell/glob/ls.`,
+  instructions: `You are a coding agent working in: ${cwd}
+  # Agency
+  - USE your tools. Read files, search code, run commands, then answer.
+  - Do NOT explain what you WOULD do. Actually do it.
+  - Prefer grep for searching, read for viewing files.
+  - Use bash only for commands that aren't covered by other tools.
+
+  # Guardrails
+  - Prefer simple, minimal changes
+  - Search before creating, and reuse existing patterns
+  - No new dependencies without asking`,
   tools: createTools(cwd),
   stopWhen: stepCountIs(10),
 });
