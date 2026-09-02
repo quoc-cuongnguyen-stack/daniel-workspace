@@ -2,6 +2,7 @@ import { Agent, type ConversationStep, type Run, type SDKCustomTool } from "@cur
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { collectAgentsMd } from "./lib/agents-md.ts";
+import { createLocalSandbox } from "./lib/sandbox-local.ts";
 import { createTools } from "./lib/tools.ts";
 import { buildSystemPrompt } from "./lib/system-prompt.ts";
 
@@ -72,11 +73,13 @@ class ToolLoopAgent {
     }
   }
 }
-const tools = createTools(cwd);
+const sandbox = createLocalSandbox(cwd);
+console.error(`Sandbox: ${sandbox.type}`);
+const tools = createTools(sandbox);
 
 const instructions = buildSystemPrompt({
-  workingDirectory: cwd,
-  sandboxType: "local",
+  workingDirectory: sandbox.workingDirectory,
+  sandboxType: sandbox.type,
   toolNames: Object.keys(tools),
   scripts: readPackageScripts(cwd),
   projectContext,

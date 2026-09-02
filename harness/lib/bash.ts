@@ -1,58 +1,23 @@
-import { execSync } from "node:child_process";
 import { z } from "zod";
 import type { ApprovalGate } from "./mode-approval.ts";
+import type { Sandbox } from "./sandbox.ts";
 import { tool } from "./tool.ts";
 
-export type BashOperations = {
-  exec(command: string): Promise<{ stdout: string; exitCode: number }>;
-};
-
-export function createLocalOps(workingDir: string): BashOperations {
-  return {
-    async exec(command) {
-      try {
-        const stdout = execSync(command, {
-          cwd: workingDir,
-          encoding: "utf-8",
-          timeout: 30_000,
-          stdio: ["ignore", "pipe", "pipe"],
-        });
-        return { stdout, exitCode: 0 };
-      } catch (err) {
-        const failure = err as {
-          status?: number | null;
-          stdout?: string;
-          stderr?: string;
-          message?: string;
-          killed?: boolean;
-        };
-        if (failure.killed) {
-          return { stdout: "(bash timed out)", exitCode: 124 };
-        }
-        return {
-          stdout: (failure.stdout || failure.stderr || failure.message || "").trim(),
-          exitCode: failure.status ?? 1,
-        };
-      }
-    },
-  };
-}
-
-export function createBashTool(operations: BashOperations, gate: ApprovalGate) {
+export function createBashTool(sandbox: Sandbox, gate: ApprovalGate) {
   return tool({
     description: `Execute a shell command in the working directory.
  
-WHEN TO USE: running build commands, installing packages, running tests,
-  git operations, directory listings. Command "trust --list" prints the
-  always-allowed prefixes and this session's approved commands.
- 
-WHEN NOT TO USE: reading file contents (use read instead).
-  Searching for patterns (use grep instead).
- 
-DO NOT USE FOR: reading files (use read), searching code (use grep).
- 
-USAGE: command is a single shell string. Commands not approved by the
-  approval policy are blocked and return a clear error message.`,
+  WHEN TO USE: running build commands, installing packages, running tests,
+    git operations, directory listings. Command "trust --list" prints the
+    always-allowed prefixes and this session's approved commands.
+    
+  WHEN NOT TO USE: reading file contents (use read instead).
+    Searching for patterns (use grep instead).
+    
+  DO NOT USE FOR: reading files (use read), searching code (use grep).
+    
+  USAGE: command is a single shell string. Commands not approved by the
+    approval policy are blocked and return a clear error message.`,
     inputSchema: z.object({
       command: z.string().describe("Shell command to execute"),
     }),
@@ -67,7 +32,7 @@ USAGE: command is a single shell string. Commands not approved by the
           return `Blocked: "${cmd}" requires approval.`;
         }
       }
-      const { stdout } = await operations.exec(cmd);
+      const { stdout } = await sandbox.exec(cmd);
       return stdout || "(no output)";
     },
   });
