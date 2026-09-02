@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ApprovalGate } from "./mode-approval.ts";
-import type { Sandbox } from "./sandbox.ts";
+import type { Sandbox } from "../sandbox/sandbox.ts";
 import { tool } from "./tool.ts";
 
 export function createBashTool(sandbox: Sandbox, gate: ApprovalGate) {

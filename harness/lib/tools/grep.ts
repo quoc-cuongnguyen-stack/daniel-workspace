@@ -1,11 +1,6 @@
-import type { SDKCustomTool } from "@cursor/sdk";
 import { z } from "zod";
-import { createApproval } from "./mode-approval.ts";
-import { createBashTool } from "./bash.ts";
-import { createReadTool } from "./read.ts";
-import { createWriteTool } from "./write.ts";
-import { shQuote } from "./sh-quote.ts";
-import type { Sandbox, WritableSandbox } from "./sandbox.ts";
+import { shQuote } from "../sh-quote.ts";
+import type { Sandbox } from "../sandbox/sandbox.ts";
 import { tool } from "./tool.ts";
 
 export function createGrepTool(sandbox: Sandbox) {
@@ -55,11 +50,4 @@ export function createGrepTool(sandbox: Sandbox) {
   });
 }
 
-export function createTools(sandbox: WritableSandbox): Record<string, SDKCustomTool> {
-  return {
-    read: createReadTool(sandbox),
-    grep: createGrepTool(sandbox),
-    bash: createBashTool(sandbox, createApproval({ mode: "interactive" })),
-    write: createWriteTool(sandbox),
-  };
-}
+

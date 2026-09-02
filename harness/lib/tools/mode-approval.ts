@@ -1,5 +1,5 @@
 import { createInterface } from "node:readline/promises";
-import { isSafe, SAFE_PREFIXES } from "./is-safe.ts";
+import { isSafe, SAFE_PREFIXES } from "../rules/is-safe.ts";
 
 export type ApprovalConfig =
   | { mode: "interactive" }

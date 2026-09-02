@@ -1,6 +1,6 @@
 import { isAbsolute, relative, resolve } from "node:path";
 import z from "zod";
-import type { WritableSandbox } from "./sandbox.ts";
+import type { WritableSandbox } from "../sandbox/sandbox.ts";
 import { tool } from "./tool.ts";
 
 export function createWriteTool(sandbox: WritableSandbox) {
