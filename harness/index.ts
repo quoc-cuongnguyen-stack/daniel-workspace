@@ -1,10 +1,13 @@
 import { Agent, type ConversationStep, type Run, type SDKCustomTool } from "@cursor/sdk";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { collectAgentsMd } from "./lib/agents-md.ts";
-import { createLocalSandbox } from "./lib/sandbox-local.ts";
-import { createTools } from "./lib/tools.ts";
+import { collectAgentsMd } from "./lib/rules/agents-md.ts";
+import { createLocalSandbox } from "./lib/sandbox/sandbox-local.ts";
 import { buildSystemPrompt } from "./lib/system-prompt.ts";
+import { createGrepTool } from "./lib/tools/grep.ts";
+import { createReadTool } from "./lib/tools/read.ts";
+import { createBashTool } from "./lib/tools/bash.ts";
+import { createApproval } from "./lib/tools/mode-approval.ts";
 
 const cwd = resolve(process.argv[2] || process.cwd());
 const projectContext = collectAgentsMd(cwd);
@@ -75,7 +78,11 @@ class ToolLoopAgent {
 }
 const sandbox = createLocalSandbox(cwd);
 console.error(`Sandbox: ${sandbox.type}`);
-const tools = createTools(sandbox);
+const tools = {
+  read: createReadTool(sandbox),
+  grep: createGrepTool(sandbox),
+  bash: createBashTool(sandbox, createApproval({ mode: "interactive" })),
+};
 
 const instructions = buildSystemPrompt({
   workingDirectory: sandbox.workingDirectory,
