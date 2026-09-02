@@ -8,8 +8,8 @@ import { createBashTool, createLocalOps } from "./bash.ts";
 import { shQuote } from "./sh-quote.ts";
 import { tool } from "./tool.ts";
 
-export function createTools(cwd: string): Record<string, SDKCustomTool> {
-  const localOps = createLocalOps(cwd);
+export function createTools(workingDir: string): Record<string, SDKCustomTool> {
+  const localOps = createLocalOps(workingDir);
   const bash = createBashTool(localOps, createApproval({ mode: "interactive" }));
   
 
@@ -39,19 +39,19 @@ export function createTools(cwd: string): Record<string, SDKCustomTool> {
     }),
     execute: async ({ pattern, path: searchPath, glob }) => {
       console.error(`[tool] grep pattern=${pattern} path=${searchPath ?? "."} glob=${glob ?? ""}`);
-      let cmd = `grep -rn --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.pnpm-store --exclude-dir=.codegraph`;
-      if (glob) cmd += ` --include=${shQuote(glob)}`;
-      cmd += ` -e ${shQuote(pattern)} -- ${shQuote(searchPath || ".")}`;
+       let cmd = `grep -rn --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.pnpm-store --exclude-dir=.codegraph`;
+       if (glob) cmd += ` --include=${shQuote(glob)}`;
+       cmd += ` -e ${shQuote(pattern)} -- ${shQuote(searchPath || ".")}`;
 
-      let stdout = "";
-      try {
-        stdout = execSync(cmd, {
-          cwd,
-          encoding: "utf8",
-          maxBuffer: 8_000_000,
-          timeout: 60_000,
-          stdio: ["ignore", "pipe", "pipe"],
-        });
+       let stdout = "";
+       try {
+         stdout = execSync(cmd, {
+           cwd: workingDir,
+           encoding: "utf8",
+           maxBuffer: 8_000_000,
+           timeout: 60_000,
+           stdio: ["ignore", "pipe", "pipe"],
+         });
       } catch (err) {
         const failure = err as { status?: number; stdout?: string; killed?: boolean };
         if (failure.killed) return "(grep timed out)";
@@ -92,9 +92,9 @@ export function createTools(cwd: string): Record<string, SDKCustomTool> {
       offset: z.number().optional().describe("Start line (1-indexed)"),
       limit: z.number().optional().describe("Max lines to return"),
     }),
-    execute: async ({ path: filePath, offset, limit }) => {
-      const root = resolve(cwd);
-      const abs = resolve(root, filePath);
+     execute: async ({ path: filePath, offset, limit }) => {
+       const root = resolve(workingDir);
+       const abs = resolve(root, filePath);
       const rel = relative(root, abs);
       if (rel.startsWith("..") || isAbsolute(rel)) {
         return `Blocked: path escapes working directory`;

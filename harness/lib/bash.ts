@@ -7,12 +7,12 @@ export type BashOperations = {
   exec(command: string): Promise<{ stdout: string; exitCode: number }>;
 };
 
-export function createLocalOps(cwd: string): BashOperations {
+export function createLocalOps(workingDir: string): BashOperations {
   return {
     async exec(command) {
       try {
         const stdout = execSync(command, {
-          cwd,
+          cwd: workingDir,
           encoding: "utf-8",
           timeout: 30_000,
           stdio: ["ignore", "pipe", "pipe"],

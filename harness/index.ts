@@ -1,9 +1,21 @@
 import { Agent, type ConversationStep, type Run, type SDKCustomTool } from "@cursor/sdk";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createTools } from "./lib/tools.ts";
 import { buildSystemPrompt } from "./lib/system-prompt.ts";
 
 const cwd = resolve(process.argv[2] || process.cwd());
+
+function readPackageScripts(dir: string): Record<string, string> {
+  try {
+    const pkg = JSON.parse(readFileSync(resolve(dir, "package.json"), "utf-8")) as {
+      scripts?: Record<string, string>;
+    };
+    return pkg.scripts ?? {};
+  } catch {
+    return {};
+  }
+}
 
 const stepCountIs = (n: number) => n;
 
@@ -64,8 +76,8 @@ const instructions = buildSystemPrompt({
   workingDirectory: cwd,
   sandboxType: "local",
   toolNames: Object.keys(tools),
+  scripts: readPackageScripts(cwd),
 });
-console.log(instructions);
 
 const agent = new ToolLoopAgent({
   model: "claude-haiku-4-5",
