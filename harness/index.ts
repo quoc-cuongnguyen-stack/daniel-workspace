@@ -1,15 +1,12 @@
 import { Agent, type ConversationStep, type Run, type SDKCustomTool } from "@cursor/sdk";
-import { existsSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { collectAgentsMd } from "./lib/agents-md.ts";
 import { createTools } from "./lib/tools.ts";
 import { buildSystemPrompt } from "./lib/system-prompt.ts";
 
 const cwd = resolve(process.argv[2] || process.cwd());
-
-const agentsPath = join(cwd, "AGENTS.md");
-const projectContext = existsSync(agentsPath)
-  ? readFileSync(agentsPath, "utf-8")
-  : undefined;
+const projectContext = collectAgentsMd(cwd);
 
 function readPackageScripts(dir: string): Record<string, string> {
   try {
