@@ -8,6 +8,7 @@ import { createGrepTool } from "./lib/tools/grep.ts";
 import { createReadTool } from "./lib/tools/read.ts";
 import { createBashTool } from "./lib/tools/bash.ts";
 import { createApproval } from "./lib/tools/mode-approval.ts";
+import { createJustBashSandbox } from "./lib/sandbox/sandbox-just-bash.ts";
 
 const cwd = resolve(process.argv[2] || process.cwd());
 const projectContext = collectAgentsMd(cwd);
@@ -42,7 +43,7 @@ class ToolLoopAgent {
     const cursor = await Agent.create({
       model: { id: this.opts.model },
       apiKey: process.env.CURSOR_API_KEY,
-      disallowedTools: ["read", "grep", "shell", "glob", "ls"],
+      disallowedTools: ["read", "grep", "shell", "glob", "ls", "edit", "delete"],
       local: { cwd, customTools: this.opts.tools },
     });
     
@@ -76,8 +77,15 @@ class ToolLoopAgent {
     }
   }
 }
-const sandbox = createLocalSandbox(cwd);
+const sandboxType = process.env.SANDBOX || "local";
+
+const sandbox =
+  sandboxType === "just-bash"
+    ? await createJustBashSandbox(cwd)
+    : createLocalSandbox(cwd);
+
 console.error(`Sandbox: ${sandbox.type}`);
+
 const tools = {
   read: createReadTool(sandbox),
   grep: createGrepTool(sandbox),

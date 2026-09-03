@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { execSync } from "node:child_process";
 import type { Sandbox } from "./sandbox.ts";
- 
+
 export function createLocalSandbox(dir: string): Sandbox {
   return {
     type: "local",

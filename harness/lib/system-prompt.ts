@@ -33,11 +33,11 @@ export function buildSystemPrompt(ctx: PromptContext): string {
 
     const verify = VERIFY_SCRIPTS.filter((name) => ctx.scripts?.[name]);
     const steps =
-      verify.length === 0
+    verify.length === 0
         ? "This project has no typecheck, lint, test, or build scripts. Do not invent those checks."
         : verify
             .map(
-              (name, i) =>
+            (name, i) =>
                 `${i + 1}. Run \`pnpm ${name}\` (scripts.${name} is defined)`,
             )
             .join("\n");
