@@ -4,7 +4,7 @@ Personal sandbox. Not [quoc-cuongnguyen-stack/SSL](https://github.com/quoc-cuong
 
 ## Layout
 
-- `harness/` — portable agent loop (`@cursor/sdk`) + generic skills/hooks. Not installed on SSL.
+- `harness/` — portable agent loop (AI SDK + local Qwen) + generic skills/hooks. Not installed on SSL.
 - `workspace/` — copy of SSL `daniel_workspace/` (bug journal, qa-agent, mcp-server, …).
 
 ## Setup
@@ -15,10 +15,10 @@ Needs Node 22+ and pnpm.
 # 1. Harness (loop agent)
 cd harness
 pnpm install
-cp .env.example .env          # set CURSOR_API_KEY
+cp .env.example .env          # LOCAL_BASE_URL + LOCAL_MODEL
 pnpm typecheck
-export CURSOR_API_KEY=...     # or: node --env-file=.env --experimental-strip-types index.ts
-pnpm start -- /path/to/project "list files"
+# Start Bionic/LM Studio OpenAI server on :1234, then:
+pnpm start -- . "Read package.json, then tsconfig.json, then index.ts, then summarize everything"
 
 # 2. MCP server
 cd ../workspace/mcp-server

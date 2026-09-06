@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Sandbox } from "../sandbox/sandbox.ts";
+import { tool } from "ai";
 import { resolveToolCaps, type ToolCaps } from "./caps.ts";
-import { tool } from "./tool.ts";
 
 export function createBashTool(
   sandbox: Sandbox,

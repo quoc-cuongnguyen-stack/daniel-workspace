@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { shQuote } from "../sh-quote.ts";
 import type { Sandbox } from "../sandbox/sandbox.ts";
+import { tool } from "ai";
 import { resolveToolCaps, type ToolCaps } from "./caps.ts";
-import { tool } from "./tool.ts";
 
 export function createGrepTool(sandbox: Sandbox, caps?: Partial<ToolCaps>) {
   const { grepMatches: MAX_MATCHES } = resolveToolCaps(caps);

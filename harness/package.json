@@ -4,7 +4,6 @@
   "type": "module",
   "scripts": {
     "start": "node --env-file-if-exists=.env --experimental-strip-types index.ts",
-    "start:ai": "node --env-file-if-exists=.env --experimental-strip-types index-ai.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
@@ -12,7 +11,7 @@
     "typescript": "5.9.3"
   },
   "dependencies": {
-    "@cursor/sdk": "1.0.29",
+    "@ai-sdk/openai-compatible": "^2.0.74",
     "ai": "^7.0.91",
     "just-bash": "^3.4.2",
     "zod": "^4.4.3"
