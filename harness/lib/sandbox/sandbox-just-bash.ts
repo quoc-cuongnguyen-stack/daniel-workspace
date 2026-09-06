@@ -1,5 +1,5 @@
 import { Sandbox as JustBashSandbox } from "just-bash";
-import { Sandbox } from "./sandbox.ts";
+import type { Sandbox } from "./sandbox.ts";
 
 const MOUNT = "/home/user/project";
 
