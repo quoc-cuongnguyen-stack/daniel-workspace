@@ -12,6 +12,8 @@ import { createGrepTool } from "./lib/tools/grep.ts";
 import { createApproval } from "./lib/tools/mode-approval.ts";
 import { limitOneToolPerTurn } from "./lib/tools/one-per-turn.ts";
 import { createReadTool } from "./lib/tools/read.ts";
+import { createTaskTool } from "./lib/tools/task.ts";
+import { createWriteTool } from "./lib/tools/write.ts";
 
 const cwd = resolve(process.argv[2] || process.cwd());
 const projectContext = collectAgentsMd(cwd);
@@ -36,10 +38,20 @@ const sandbox =
 console.error(`Sandbox: ${sandbox.type}`);
 
 const model = await createLocalModel();
+const read = createReadTool(sandbox);
+const grep = createGrepTool(sandbox);
+const write = createWriteTool(sandbox as Parameters<typeof createWriteTool>[0]);
+const bash = createBashTool(
+  sandbox,
+  createApproval({ mode: "interactive" }).needsApproval,
+);
+
 const { tools, resetTurn } = limitOneToolPerTurn({
-  read: createReadTool(sandbox),
-  grep: createGrepTool(sandbox),
-  bash: createBashTool(sandbox, createApproval({ mode: "interactive" }).needsApproval),
+  read,
+  grep,
+  write,
+  bash,
+  task: createTaskTool(sandbox, { read, grep }, model),
 });
 
 const instructions = buildSystemPrompt({
