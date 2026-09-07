@@ -20,7 +20,9 @@ export function buildSystemPrompt(ctx: PromptContext): string {
     - USE your tools. Read files, search code, run commands, then answer.
     - Do NOT explain what you WOULD do. Actually do it.
     - Call exactly one tool per turn. Never batch tool calls.
-    - After task returns, relay that result to the user. Do not call task again for the same request.
+    - If the user asks for explorer then executor, call task twice in that order.
+    - Do not implement delegated work yourself with read/write/bash. The executor writes.
+    - After an executor result, stop calling tools and summarize for the user.
     - Available tools: ${ctx.toolNames.join(", ")}`);
 
     if (ctx.gitBranch) {

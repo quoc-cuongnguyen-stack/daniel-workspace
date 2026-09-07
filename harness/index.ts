@@ -47,12 +47,26 @@ const bash = createBashTool(
   createApproval({ mode: "interactive" }),
 );
 
+let stopAfterExecutor = false;
+
 const { tools, resetTurn } = limitOneToolPerTurn({
   read,
   grep,
   write,
   bash,
-  task: createTaskTool(sandbox, { read, grep, write }, { trust: PARENT_TRUST, depth: 0 }),
+  task: createTaskTool(
+    sandbox,
+    { read, grep, write },
+    {
+      trust: PARENT_TRUST,
+      depth: 0,
+      parentRole: "orchestrator",
+      onExecutorFinish: () => {
+        stopAfterExecutor = true;
+        console.error("[parent] executor finished; tools disabled");
+      },
+    },
+  ),
 });
 
 const instructions = buildSystemPrompt({
@@ -67,7 +81,13 @@ const agent = new ToolLoopAgent({
   model,
   instructions,
   tools,
-  stopWhen: stepCountIs(15),
+  stopWhen: [
+    stepCountIs(15),
+    ({ steps }) => {
+      const last = steps.at(-1);
+      return stopAfterExecutor && (last?.toolCalls.length ?? 0) === 0;
+    },
+  ],
   maxRetries: 0,
   onStepStart: () => {
     resetTurn();
@@ -84,7 +104,12 @@ const agent = new ToolLoopAgent({
       messages,
       toolCalls: "before-last-3-messages",
     });
-    return { messages: addCacheControl(pruned) };
+    return {
+      messages: addCacheControl(pruned),
+      ...(stopAfterExecutor
+        ? { toolChoice: "none" as const, activeTools: [] }
+        : {}),
+    };
   },
 });
 
