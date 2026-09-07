@@ -6,33 +6,18 @@ import { resolveToolCaps, type ToolCaps } from "./caps.ts";
 export function createBashTool(
   sandbox: Sandbox,
   needsApproval: (input: { command: string }) => boolean,
-  caps?: Partial<ToolCaps>,
 ) {
-  const { bashChars: MAX_BASH_CHARS } = resolveToolCaps(caps);
-
+  const MAX_BASH_CHARS = 5000;
+ 
   return tool({
     description: `Execute a shell command in the working directory.
-
-WHEN TO USE: running build commands, installing packages, running tests,
-git operations, directory listings.
-
-WHEN NOT TO USE: reading file contents (use read instead).
-Searching for patterns (use grep instead).
-
-DO NOT USE FOR: reading files (use read), searching code (use grep).
-
-USAGE: command is a single shell string. Commands not approved by the
-approval policy are blocked and return a clear error message.
-Stdout is capped at ${MAX_BASH_CHARS} characters (tail kept).
-
-EXAMPLES:
-- List files: command "ls -la"
-- Check git status: command "git status"
-- Run a test suite: command "npm test"`,
+WHEN TO USE: build commands, package install, tests, git, directory listings.
+WHEN NOT TO USE: reading file contents (use read).
+DO NOT USE FOR: reading files (use read), searching code (use grep).`,
     inputSchema: z.object({
       command: z.string().describe("Shell command to execute"),
     }),
-    execute: async ({ command }: { command: string }) => {
+    execute: async ({ command }) => {
       if (needsApproval({ command })) {
         return `Blocked: "${command}" requires approval.`;
       }
