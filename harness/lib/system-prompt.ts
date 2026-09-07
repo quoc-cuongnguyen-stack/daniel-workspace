@@ -19,6 +19,7 @@ export function buildSystemPrompt(ctx: PromptContext): string {
     # Agency
     - USE your tools. Read files, search code, run commands, then answer.
     - Do NOT explain what you WOULD do. Actually do it.
+    - Call exactly one tool per turn. Never batch tool calls.
     - Available tools: ${ctx.toolNames.join(", ")}`);
 
     if (ctx.gitBranch) {

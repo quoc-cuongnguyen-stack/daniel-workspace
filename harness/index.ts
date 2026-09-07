@@ -10,6 +10,7 @@ import { buildSystemPrompt } from "./lib/system-prompt.ts";
 import { createBashTool } from "./lib/tools/bash.ts";
 import { createGrepTool } from "./lib/tools/grep.ts";
 import { createApproval } from "./lib/tools/mode-approval.ts";
+import { limitOneToolPerTurn } from "./lib/tools/one-per-turn.ts";
 import { createReadTool } from "./lib/tools/read.ts";
 
 const cwd = resolve(process.argv[2] || process.cwd());
@@ -34,11 +35,12 @@ const sandbox =
 
 console.error(`Sandbox: ${sandbox.type}`);
 
-const tools = {
+const model = await createLocalModel();
+const { tools, resetTurn } = limitOneToolPerTurn({
   read: createReadTool(sandbox),
   grep: createGrepTool(sandbox),
   bash: createBashTool(sandbox, createApproval({ mode: "interactive" }).needsApproval),
-};
+});
 
 const instructions = buildSystemPrompt({
   workingDirectory: sandbox.workingDirectory,
@@ -49,27 +51,27 @@ const instructions = buildSystemPrompt({
 });
 
 const agent = new ToolLoopAgent({
-  model: createLocalModel(),
+  model,
   instructions,
   tools,
   stopWhen: stepCountIs(15),
+  maxRetries: 0,
+  onStepStart: () => {
+    resetTurn();
+  },
   onStepFinish: ({ usage, stepNumber }) => {
     console.error(
       `Step ${stepNumber}: ${usage.inputTokens} input, ${usage.outputTokens} output, ${usage.inputTokenDetails.cacheReadTokens ?? 0} cached`,
     );
   },
-  prepareCall: async (options) => {
-    const pruned = options.messages
-      ? pruneMessages({
-          messages: options.messages,
-          toolCalls: "before-last-3-messages",
-        })
-      : undefined;
-
-    return {
-      ...options,
-      messages: pruned ? addCacheControl(pruned) : undefined,
-    };
+  // AI SDK 7: prepareCall runs once at generate() start (messages is undefined).
+  // prepareStep runs before every model call — prune then mark stable prefix.
+  prepareStep: ({ messages }) => {
+    const pruned = pruneMessages({
+      messages,
+      toolCalls: "before-last-3-messages",
+    });
+    return { messages: addCacheControl(pruned) };
   },
 });
 

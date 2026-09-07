@@ -2,7 +2,13 @@ import type { ModelMessage } from "ai";
 
 export function addCacheControl(messages: ModelMessage[]): ModelMessage[] {
   return messages.map((msg, i) => {
-    if (i === 0 || i < messages.length - 2) {
+    if (i === 0) {
+      return {
+        ...msg,
+        providerOptions: { cacheControl: { type: "ephemeral" } },
+      };
+    }
+    if (i < messages.length - 2) {
       return {
         ...msg,
         providerOptions: { cacheControl: { type: "ephemeral" } },
@@ -11,6 +17,7 @@ export function addCacheControl(messages: ModelMessage[]): ModelMessage[] {
     return msg;
   });
 }
+
 
 {
   const messages = [
