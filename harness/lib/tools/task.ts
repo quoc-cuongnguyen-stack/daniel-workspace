@@ -25,7 +25,7 @@ DO NOT USE FOR: tasks that need decisions or askUser interactions.`,
         const explorer = new ToolLoopAgent({
         model,
         instructions: `You are an explorer agent. Investigate and report back concisely.
-Working directory: ${sandbox.workingDirectory}`,
+        Working directory: ${sandbox.workingDirectory}`,
         tools: { read: parentTools.read, grep: parentTools.grep },
         stopWhen: stepCountIs(5),
         maxRetries: 0,

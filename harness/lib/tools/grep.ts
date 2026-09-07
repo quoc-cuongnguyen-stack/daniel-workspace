@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { shQuote } from "../sh-quote.ts";
+import { shQuote } from "../handle/sh-quote.ts";
 import type { Sandbox } from "../sandbox/sandbox.ts";
 import { tool } from "ai";
 import { resolveToolCaps, type ToolCaps } from "./caps.ts";
