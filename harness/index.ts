@@ -10,6 +10,7 @@ import { buildSystemPrompt } from "./lib/handle/system-prompt.ts";
 import { createBashTool } from "./lib/tools/bash.ts";
 import { createGrepTool } from "./lib/tools/grep.ts";
 import { createApproval } from "./lib/approved-mode/mode-approval.ts";
+import { PARENT_TRUST } from "./lib/approved-mode/trust.ts";
 import { limitOneToolPerTurn } from "./lib/handle/one-per-turn.ts";
 import { createReadTool } from "./lib/tools/read.ts";
 import { createTaskTool } from "./lib/tools/task.ts";
@@ -51,7 +52,7 @@ const { tools, resetTurn } = limitOneToolPerTurn({
   grep,
   write,
   bash,
-  task: createTaskTool(sandbox, { read, grep, write }),
+  task: createTaskTool(sandbox, { read, grep, write }, { trust: PARENT_TRUST, depth: 0 }),
 });
 
 const instructions = buildSystemPrompt({

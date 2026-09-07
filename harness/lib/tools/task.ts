@@ -1,6 +1,7 @@
 import { ToolLoopAgent, stepCountIs, tool } from "ai";
 import { z } from "zod";
 import { createApproval } from "../approved-mode/mode-approval.ts";
+import { inheritTrust } from "../approved-mode/trust.ts";
 import { createLocalModel } from "../model.ts";
 import type { Sandbox } from "../sandbox/sandbox.ts";
 import { createBashTool } from "./bash.ts";
@@ -15,6 +16,7 @@ export function createTaskTool(
         grep: ReturnType<typeof createGrepTool>;
         write: ReturnType<typeof createWriteTool>;
     },
+    spawn: { trust: readonly string[]; depth?: number },
 ) {
     return tool({
         description: `Delegate work to a subagent.
@@ -36,11 +38,15 @@ After this tool returns, relay the result to the user. Do not call task again fo
             console.error(`[task] start type=${subagentType}`);
 
             if (subagentType === "executor") {
+                const depth = (spawn.depth ?? 0) + 1;
+                const trust = inheritTrust(spawn.trust, depth);
+                console.error(`[task] executor depth=${depth} trust=${trust.length}`);
+
                 const executorBash = createBashTool(
                     sandbox,
                     createApproval({
                         mode: "delegated",
-                        trust: ["npm test", "npm run build", "npx tsc"],
+                        trust,
                     }),
                 );
 
