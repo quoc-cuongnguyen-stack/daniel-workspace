@@ -4,11 +4,12 @@ const DEFAULT_BASE_URL = "http://127.0.0.1:1234/v1";
 const DEFAULT_MODEL =
   "qwen3.5-9b-the-defiant-fable-uncensored-heretic-neo-imatrix-max-mtp";
 
-export async function createLocalModel() {
-  const baseURL = process.env.LOCAL_BASE_URL ?? DEFAULT_BASE_URL;
-  const modelId = process.env.LOCAL_MODEL ?? DEFAULT_MODEL;
+let serverReady: Promise<void> | undefined;
 
-  await assertLocalServer(baseURL);
+export async function createLocalModel(modelId = process.env.LOCAL_MODEL ?? DEFAULT_MODEL) {
+  const baseURL = process.env.LOCAL_BASE_URL ?? DEFAULT_BASE_URL;
+  serverReady ??= assertLocalServer(baseURL);
+  await serverReady;
 
   const local = createOpenAICompatible({
     name: "bionic",

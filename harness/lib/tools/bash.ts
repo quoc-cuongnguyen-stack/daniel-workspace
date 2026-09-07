@@ -1,14 +1,15 @@
-import { z } from "zod";
-import type { Sandbox } from "../sandbox/sandbox.ts";
 import { tool } from "ai";
-import { resolveToolCaps, type ToolCaps } from "./caps.ts";
+import { z } from "zod";
+import type { ApprovalGate } from "../approved-mode/mode-approval.ts";
+import type { Sandbox } from "../sandbox/sandbox.ts";
 
-export function createBashTool(
-  sandbox: Sandbox,
-  needsApproval: (input: { command: string }) => boolean,
-) {
+type NeedsApproval = ApprovalGate | ((input: { command: string }) => boolean);
+
+export function createBashTool(sandbox: Sandbox, approval: NeedsApproval) {
+  const needsApproval =
+    typeof approval === "function" ? approval : approval.needsApproval;
   const MAX_BASH_CHARS = 5000;
- 
+
   return tool({
     description: `Execute a shell command in the working directory.
 WHEN TO USE: build commands, package install, tests, git, directory listings.

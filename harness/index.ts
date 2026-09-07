@@ -43,7 +43,7 @@ const grep = createGrepTool(sandbox);
 const write = createWriteTool(sandbox as Parameters<typeof createWriteTool>[0]);
 const bash = createBashTool(
   sandbox,
-  createApproval({ mode: "interactive" }).needsApproval,
+  createApproval({ mode: "interactive" }),
 );
 
 const { tools, resetTurn } = limitOneToolPerTurn({
@@ -51,7 +51,7 @@ const { tools, resetTurn } = limitOneToolPerTurn({
   grep,
   write,
   bash,
-  task: createTaskTool(sandbox, { read, grep }, model),
+  task: createTaskTool(sandbox, { read, grep, write }),
 });
 
 const instructions = buildSystemPrompt({

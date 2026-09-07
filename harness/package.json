@@ -4,11 +4,14 @@
   "type": "module",
   "scripts": {
     "start": "node --env-file-if-exists=.env --experimental-strip-types index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
   },
   "devDependencies": {
     "@types/node": "25.5.0",
-    "typescript": "5.9.3"
+    "eslint": "^9.39.5",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.69.0"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^2.0.74",
