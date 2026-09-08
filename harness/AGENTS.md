@@ -1,24 +1,9 @@
 # Project Instructions
- 
-## Commands
-- `bun test` runs the test suite
-- `bun run build` builds for production
-- `bun run lint` checks code style
- 
-## Architecture
-- Monorepo, packages live in `packages/`
-- Each package has its own `tsconfig.json`
-- Shared types in `packages/shared/`
- 
-## Style
-- Functional components, no classes
-- Named exports, not default
-- Error messages must be user-facing
- 
-## Lessons learned
-- Auth middleware must run before rate limiting
-- Don't modify migration files directly, generate new ones
 
-# Project Instructions
-- All commits must use the format `feat(scope): message`
-- The verification step is `bun test`, not `npm test`
+This package is the portable agent loop, not a product app.
+
+- Canonical Layer 0 for the sandbox is the repo-root `AGENTS.md`.
+- ICM factory lives in `../.icm/`. Start at `../.icm/CONTEXT.md`.
+- Paths here are under `lib/`, not `src/`.
+- Do not treat this file as product conventions. Do not invent `packages/`, bun scripts, or `I_` / `T_` / `E_` naming from this file.
+- When this directory is `project-cwd`, verify with `pnpm typecheck` and `pnpm lint` only if those scripts exist.
