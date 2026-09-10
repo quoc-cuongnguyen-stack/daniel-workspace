@@ -6,6 +6,7 @@ import { createLocalModel } from "./lib/model.ts";
 import { collectAgentsMd } from "./lib/rules/agents-md.ts";
 import { createJustBashSandbox } from "./lib/sandbox/sandbox-just-bash.ts";
 import { createLocalSandbox } from "./lib/sandbox/sandbox-local.ts";
+import type { SandboxLifecycle } from "./lib/sandbox/sandbox.ts";
 import { buildSystemPrompt } from "./lib/handle/system-prompt.ts";
 import { createBashTool } from "./lib/tools/bash.ts";
 import { createGrepTool } from "./lib/tools/grep.ts";
@@ -38,82 +39,91 @@ const sandbox =
 
 console.error(`Sandbox: ${sandbox.type}`);
 
-const model = await createLocalModel();
-const read = createReadTool(sandbox);
-const grep = createGrepTool(sandbox);
-const write = createWriteTool(sandbox as Parameters<typeof createWriteTool>[0]);
-const bash = createBashTool(
-  sandbox,
-  createApproval({ mode: "interactive" }),
-);
+const lifecycle: SandboxLifecycle = {};
 
-let stopAfterExecutor = false;
+await lifecycle.afterStart?.(sandbox);
 
-const { tools, resetTurn } = limitOneToolPerTurn({
-  read,
-  grep,
-  write,
-  bash,
-  task: createTaskTool(
+try {
+  const model = await createLocalModel();
+  const read = createReadTool(sandbox);
+  const grep = createGrepTool(sandbox);
+  const write = createWriteTool(sandbox as Parameters<typeof createWriteTool>[0]);
+  const bash = createBashTool(
     sandbox,
-    { read, grep, write },
-    {
-      trust: PARENT_TRUST,
-      depth: 0,
-      parentRole: "orchestrator",
-      onExecutorFinish: () => {
-        stopAfterExecutor = true;
-        console.error("[parent] executor finished; tools disabled");
+    createApproval({ mode: "interactive" }),
+  );
+
+  let stopAfterExecutor = false;
+
+  const { tools, resetTurn } = limitOneToolPerTurn({
+    read,
+    grep,
+    write,
+    bash,
+    task: createTaskTool(
+      sandbox,
+      { read, grep, write },
+      {
+        trust: PARENT_TRUST,
+        depth: 0,
+        parentRole: "orchestrator",
+        onExecutorFinish: () => {
+          stopAfterExecutor = true;
+          console.error("[parent] executor finished; tools disabled");
+        },
       },
+    ),
+  });
+
+  const instructions = buildSystemPrompt({
+    workingDirectory: sandbox.workingDirectory,
+    sandboxType: sandbox.type,
+    toolNames: Object.keys(tools),
+    scripts: readPackageScripts(cwd),
+    projectContext,
+  });
+
+  const agent = new ToolLoopAgent({
+    model,
+    instructions,
+    tools,
+    stopWhen: [
+      stepCountIs(15),
+      ({ steps }) => {
+        const last = steps.at(-1);
+        return stopAfterExecutor && (last?.toolCalls.length ?? 0) === 0;
+      },
+    ],
+    maxRetries: 0,
+    onStepStart: () => {
+      resetTurn();
     },
-  ),
-});
-
-const instructions = buildSystemPrompt({
-  workingDirectory: sandbox.workingDirectory,
-  sandboxType: sandbox.type,
-  toolNames: Object.keys(tools),
-  scripts: readPackageScripts(cwd),
-  projectContext,
-});
-
-const agent = new ToolLoopAgent({
-  model,
-  instructions,
-  tools,
-  stopWhen: [
-    stepCountIs(15),
-    ({ steps }) => {
-      const last = steps.at(-1);
-      return stopAfterExecutor && (last?.toolCalls.length ?? 0) === 0;
+    onStepFinish: ({ usage, stepNumber }) => {
+      console.error(
+        `Step ${stepNumber}: ${usage.inputTokens} input, ${usage.outputTokens} output, ${usage.inputTokenDetails.cacheReadTokens ?? 0} cached`,
+      );
     },
-  ],
-  maxRetries: 0,
-  onStepStart: () => {
-    resetTurn();
-  },
-  onStepFinish: ({ usage, stepNumber }) => {
-    console.error(
-      `Step ${stepNumber}: ${usage.inputTokens} input, ${usage.outputTokens} output, ${usage.inputTokenDetails.cacheReadTokens ?? 0} cached`,
-    );
-  },
-  // AI SDK 7: prepareCall runs once at generate() start (messages is undefined).
-  // prepareStep runs before every model call — prune then mark stable prefix.
-  prepareStep: ({ messages }) => {
-    const pruned = pruneMessages({
-      messages,
-      toolCalls: "before-last-3-messages",
-    });
-    return {
-      messages: addCacheControl(pruned),
-      ...(stopAfterExecutor
-        ? { toolChoice: "none" as const, activeTools: [] }
-        : {}),
-    };
-  },
-});
+    // AI SDK 7: prepareCall runs once at generate() start (messages is undefined).
+    // prepareStep runs before every model call — prune then mark stable prefix.
+    prepareStep: ({ messages }) => {
+      const pruned = pruneMessages({
+        messages,
+        toolCalls: "before-last-3-messages",
+      });
+      return {
+        messages: addCacheControl(pruned),
+        ...(stopAfterExecutor
+          ? { toolChoice: "none" as const, activeTools: [] }
+          : {}),
+      };
+    },
+  });
 
-const prompt = process.argv.slice(3).join(" ") || "Hello!";
-const { text, steps } = await agent.generate({ prompt });
-console.log(text);
-console.log(`\n(${steps.length} steps)`);
+  const prompt = process.argv.slice(3).join(" ") || "Hello!";
+  const { text, steps } = await agent.generate({ prompt });
+  console.log(text);
+  console.log(`\n(${steps.length} steps)`);
+} finally {
+  await lifecycle.beforeStop?.(sandbox);
+  await sandbox.stop();
+}

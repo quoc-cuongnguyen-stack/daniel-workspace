@@ -12,3 +12,9 @@ export interface Sandbox {
 export interface WritableSandbox extends Sandbox {
   writeFile(path: string, content: string): Promise<void>;
 }
+
+export interface SandboxLifecycle {
+  afterStart?(sandbox: Sandbox): Promise<void>;
+  beforeStop?(sandbox: Sandbox): Promise<void>;
+  onTimeout?(sandbox: Sandbox): Promise<void>;
+}
