@@ -17,7 +17,7 @@ WHEN NOT TO USE: searching for patterns across files (use grep instead).
 Running commands (use bash instead).
 
 DO NOT USE FOR: searching code (use grep), executing commands (use bash),
-modifying files (use edit or write).
+modifying files (use write).
 
 USAGE: path is relative to working directory. offset and limit are optional.
 Output is capped at ${MAX_LINES} lines.

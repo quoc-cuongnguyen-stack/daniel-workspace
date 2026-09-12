@@ -4,6 +4,9 @@ import { dirname, resolve } from "node:path";
 import type { WritableSandbox } from "./sandbox.ts";
 
 export function createLocalSandbox(dir: string): WritableSandbox {
+  let inFlight: Promise<{ snapshotId: string }> | null = null;
+  let stopped = false;
+
   return {
     type: "local",
     workingDirectory: dir,
@@ -34,6 +37,18 @@ export function createLocalSandbox(dir: string): WritableSandbox {
         };
       }
     },
-    stop: async () => {},
+    snapshot: async () => {
+      if (inFlight) return inFlight;
+      inFlight = Promise.resolve({ snapshotId: `local-${Date.now()}` });
+      try {
+        return await inFlight;
+      } finally {
+        inFlight = null;
+      }
+    },
+    stop: async () => {
+      if (stopped) return;
+      stopped = true;
+    },
   };
 }

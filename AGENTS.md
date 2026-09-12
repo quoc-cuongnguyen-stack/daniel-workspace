@@ -4,7 +4,7 @@ This is `daniel-workspace`, a personal agent sandbox. It is not the SSL product.
 
 ## Where am I
 
-- `harness/` — portable agent loop (AI SDK + local Qwen). Point it at any repo with `pnpm start -- <project-cwd> "<prompt>"`. Code lives under `harness/lib/`, not `src/`.
+- `harness/` — portable agent loop (AI SDK + Claude). Point it at any repo with `pnpm start -- <project-cwd> "<prompt>"`. Code lives under `harness/lib/`, not `src/`.
 - `.icm/` — Interpretable Context Methodology factory. Layer 1 is `.icm/CONTEXT.md`.
 - Target product repos are `project-cwd` only. Generated ICM instances live in `.icm/projects/<slug>/`.
 

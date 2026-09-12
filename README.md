@@ -4,7 +4,7 @@ Personal sandbox. Not [quoc-cuongnguyen-stack/SSL](https://github.com/quoc-cuong
 
 ## Layout
 
-- `harness/` — portable agent loop (AI SDK + local Qwen). Point it at any repo with `pnpm start -- <project-cwd> "<prompt>"`. Code lives under `harness/lib/`.
+- `harness/` — portable agent loop (AI SDK + Claude). Point it at any repo with `pnpm start -- <project-cwd> "<prompt>"`. Code lives under `harness/lib/`.
 - `.icm/` — **ICM Project Factory**: survey a target repo and scaffold a per-project ICM under `.icm/projects/<slug>/`. See the guide below.
 - `AGENTS.md` — Layer 0 rules for this sandbox (factory identity, no writes into target repos).
 
@@ -29,9 +29,9 @@ Needs Node 22+ and pnpm.
 ```bash
 cd harness
 pnpm install
-cp .env.example .env          # LOCAL_BASE_URL + LOCAL_MODEL
+cp .env.example .env
+# Put a console.anthropic.com API key in harness/.env
 pnpm typecheck
-# Start Bionic/LM Studio OpenAI server on :1234, then:
 pnpm start -- . "Read package.json, then tsconfig.json, then index.ts, then summarize everything"
 ```
 

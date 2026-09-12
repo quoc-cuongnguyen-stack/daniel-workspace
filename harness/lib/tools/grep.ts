@@ -17,7 +17,7 @@ WHEN NOT TO USE: reading a known file (use read instead).
 Running commands (use bash instead).
 
 DO NOT USE FOR: reading files (use read), listing directories (use bash),
-modifying files (use edit).
+modifying files (use write).
 
 USAGE: pattern is a regex string. glob filters by file extension.
 Results are capped at ${MAX_MATCHES} matches.

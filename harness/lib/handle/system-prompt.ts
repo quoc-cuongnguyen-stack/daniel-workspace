@@ -16,24 +16,22 @@ export function buildSystemPrompt(ctx: PromptContext): string {
     sections.push(`Sandbox: ${ctx.sandboxType}`);
 
     sections.push(`
-    # Agency
-    - USE your tools. Read files, search code, run commands, then answer.
-    - Do NOT explain what you WOULD do. Actually do it.
-    - Call exactly one tool per turn. Never batch tool calls.
-    - If the user asks for explorer then executor, call task twice in that order.
-    - Do not implement delegated work yourself with read/write/bash. The executor writes.
-    - After an executor result, stop calling tools and summarize for the user.
-    - Available tools: ${ctx.toolNames.join(", ")}`);
+# Agency
+- USE your tools. Read files, search code, run commands, then answer.
+- Do NOT explain what you WOULD do. Actually do it.
+- Prefer grep for searching, read for viewing files.
+- Use bash only for commands that aren't covered by other tools.
+- Available tools: ${ctx.toolNames.join(", ")}`);
 
     if (ctx.gitBranch) {
     sections.push(`- Current branch: ${ctx.gitBranch}`);
     }
 
     sections.push(`
-    # Guardrails
-    - Prefer simple, minimal changes
-    - Search before creating, and reuse existing patterns
-    - No new dependencies without asking`);
+# Guardrails
+- Prefer simple, minimal changes
+- Search before creating, and reuse existing patterns
+- No new dependencies without asking`);
 
     const verify = VERIFY_SCRIPTS.filter((name) => ctx.scripts?.[name]);
     const steps =
@@ -47,20 +45,22 @@ export function buildSystemPrompt(ctx: PromptContext): string {
             .join("\n");
 
     sections.push(`
-    # Verification
-    After making changes, verify your work:
-    ${steps}
-    Only run the scripts listed above. If a script is missing, do not invent it.
-    Report exactly what you ran, what was blocked, and what was unavailable.
-    Do NOT inflate partial verification into a blanket success claim.
-    Do NOT claim "tests pass" without running them.
-    Scope your claims honestly. "Verification was limited because writes were blocked" is honest.
-    "All tests pass" when you didn't run them is not.`);
+# Verification
+After making changes, verify your work:
+1. Run \`npx tsc --noEmit\` when TypeScript is present
+2. Run lint, test, or build commands only if they exist in this project and are allowed by the current approval mode
+3. Report exactly what you ran, what was blocked, and what was unavailable
+4. Do NOT inflate partial verification into a blanket success claim
+${steps}
+
+Do NOT claim "tests pass" without running them.
+Scope your claims honestly. "Verification was limited because writes were blocked" is honest.
+"All tests pass" when you didn't run them is not.`);
 
     if (ctx.projectContext) {
     sections.push(`
-    # Project Instructions (from AGENTS.md)
-    ${ctx.projectContext}`);
+# Project Instructions (from AGENTS.md)
+${ctx.projectContext}`);
     }
 
     return sections.join("\n");

@@ -5,16 +5,22 @@ import { tool } from "ai";
 
 export function createWriteTool(sandbox: WritableSandbox) {
   return tool({
-    description: `Write a file in the project. Overwrites if it exists.
+    description: `Write a file in the project. Overwrites if it exists. Returns the written path.
 
-    WHEN TO USE: creating new files, replacing file contents.
-      
-    WHEN NOT TO USE: reading a file (use read instead).
+  WHEN TO USE: creating new files, replacing file contents, applying an executor change.
+    
+  WHEN NOT TO USE: reading a file (use read instead).
     Searching across files (use grep instead). Running commands (use bash instead).
-      
-    DO NOT USE FOR: reading files (use read), searching code (use grep).
-      
-    USAGE: path is relative to working directory. content is the full file body.`,
+    
+  DO NOT USE FOR: reading files (use read), searching code (use grep),
+    listing directories (use bash).
+    
+  USAGE: path is relative to working directory. content is the full file body.
+    
+  EXAMPLES:
+  - Create a file: path "notes.md" content "# Notes"
+  - Replace a module: path "lib/foo.ts" content "export const foo = 1;"
+  - Update config: path "tsconfig.json" content "{ \\"strict\\": true }"`,
     inputSchema: z.object({
       path: z.string().describe("File path relative to working directory"),
       content: z.string().describe("Full contents to write"),
