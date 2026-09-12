@@ -97,17 +97,16 @@ export function createTaskTool(
     parentTools: ParentTools,
     spawn: Spawn,
 ) {
+    // Lesson 6.2: Explorer / 6.3 Executor
     return tool({
         description: `Delegate work to a subagent.
-Explorer (default): read-only research with Haiku. Use for searching across files,
-  understanding patterns, and gathering context.
-Executor: implementation with Sonnet and delegated bash. Use for focused
-  changes with explicit instructions and a known verification step.
+Explorer (default): read-only research with a fast model.
+Executor: implementation with a stronger model and delegated trust on bash.
 
-WHEN TO USE: research across many files (explorer), bulk implementation (executor).
-WHEN NOT TO USE: ambiguous requirements (use askUser), architectural decisions
-  (the parent decides).
-DO NOT USE FOR: single-step tasks the parent can do directly.`,
+WHEN TO USE: the user asked to delegate; research across many files (explorer);
+  bulk implementation (executor).
+WHEN NOT TO USE: ambiguous requirements (use askUser),
+  architectural decisions (the parent decides).`,
         inputSchema: z.object({
             description: z.string().describe("Task instructions for the subagent"),
             subagentType: z
@@ -116,6 +115,7 @@ DO NOT USE FOR: single-step tasks the parent can do directly.`,
                 .describe("Subagent role"),
         }),
         execute: async ({ description, subagentType }) => {
+            console.error(`[tool] task execute subagentType=${subagentType}`);
             const parentRole = spawn.parentRole ?? "orchestrator";
             if (!canSpawn(parentRole, subagentType)) {
                 return `Blocked: ${parentRole} cannot spawn ${subagentType}`;

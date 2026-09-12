@@ -7,6 +7,7 @@ import { resolveToolCaps, type ToolCaps } from "./caps.ts";
 export function createGrepTool(sandbox: Sandbox, caps?: Partial<ToolCaps>) {
   const { grepMatches: MAX_MATCHES } = resolveToolCaps(caps);
 
+  // Lesson 1.2: Your First Tools
   return tool({
     description: `Search file contents using regex. Returns matching lines with file paths.
 

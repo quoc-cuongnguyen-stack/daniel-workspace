@@ -15,6 +15,7 @@ export function createBashTool(
     typeof approval === "function" ? approval : approval.needsApproval;
   const { bashChars: MAX_BASH_CHARS } = resolveToolCaps(caps);
 
+  // Lesson 1.3: Completing the Toolbox / 2.2 Shell Execution
   return tool({
     description: `Execute a shell command in the working directory.
 

@@ -7,6 +7,7 @@ import { resolveToolCaps, type ToolCaps } from "./caps.ts";
 export function createReadTool(sandbox: Sandbox, caps?: Partial<ToolCaps>) {
   const { readLines: MAX_LINES } = resolveToolCaps(caps);
 
+  // Lesson 1.1–1.2: From Chat to Agent / Your First Tools
   return tool({
     description: `Read a file from the project. Returns numbered lines.
 

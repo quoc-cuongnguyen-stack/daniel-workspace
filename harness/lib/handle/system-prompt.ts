@@ -15,10 +15,15 @@ export function buildSystemPrompt(ctx: PromptContext): string {
     sections.push(`You are a coding agent working in: ${ctx.workingDirectory}`);
     sections.push(`Sandbox: ${ctx.sandboxType}`);
 
+    const taskRouting = ctx.toolNames.includes("task")
+        ? `
+- When the user says delegate, call task. Do not do that research or those edits with grep, read, or write yourself.`
+        : "";
+
     sections.push(`
 # Agency
 - USE your tools. Read files, search code, run commands, then answer.
-- Do NOT explain what you WOULD do. Actually do it.
+- Do NOT explain what you WOULD do. Actually do it.${taskRouting}
 - Prefer grep for searching, read for viewing files.
 - Use bash only for commands that aren't covered by other tools.
 - Available tools: ${ctx.toolNames.join(", ")}`);
@@ -90,5 +95,17 @@ ${ctx.projectContext}`);
     }
     if (withTypecheck.includes("scripts.lint") || withTypecheck.includes("pnpm lint")) {
         throw new Error("lint must not appear when scripts.lint is missing");
+    }
+
+    const withTask = buildSystemPrompt({
+        ...base,
+        toolNames: ["read", "grep", "task"],
+    });
+    if (!withTask.includes("When the user says delegate, call task.")) {
+        throw new Error("expected task routing when task is available");
+    }
+    const withoutTask = buildSystemPrompt(base);
+    if (withoutTask.includes("When the user says delegate, call task.")) {
+        throw new Error("task routing should be absent without the task tool");
     }
 }

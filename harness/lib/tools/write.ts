@@ -4,6 +4,7 @@ import type { WritableSandbox } from "../sandbox/sandbox.ts";
 import { tool } from "ai";
 
 export function createWriteTool(sandbox: WritableSandbox) {
+  // Lesson 1–2: Completing the Toolbox
   return tool({
     description: `Write a file in the project. Overwrites if it exists. Returns the written path.
 
