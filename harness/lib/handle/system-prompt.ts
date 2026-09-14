@@ -29,7 +29,7 @@ export function buildSystemPrompt(ctx: PromptContext): string {
 - Available tools: ${ctx.toolNames.join(", ")}`);
 
     if (ctx.gitBranch) {
-    sections.push(`- Current branch: ${ctx.gitBranch}`);
+        sections.push(`- Current branch: ${ctx.gitBranch}`);
     }
 
     sections.push(`
@@ -40,14 +40,14 @@ export function buildSystemPrompt(ctx: PromptContext): string {
 
     const verify = VERIFY_SCRIPTS.filter((name) => ctx.scripts?.[name]);
     const steps =
-    verify.length === 0
-        ? "This project has no typecheck, lint, test, or build scripts. Do not invent those checks."
-        : verify
-            .map(
-            (name, i) =>
-                `${i + 1}. Run \`pnpm ${name}\` (scripts.${name} is defined)`,
-            )
-            .join("\n");
+        verify.length === 0
+            ? "This project has no typecheck, lint, test, or build scripts. Do not invent those checks."
+            : verify
+                .map(
+                    (name, i) =>
+                        `${i + 1}. Run \`pnpm ${name}\` (scripts.${name} is defined)`,
+                )
+                .join("\n");
 
     sections.push(`
 # Verification
@@ -62,8 +62,18 @@ Do NOT claim "tests pass" without running them.
 Scope your claims honestly. "Verification was limited because writes were blocked" is honest.
 "All tests pass" when you didn't run them is not.`);
 
-    if (ctx.projectContext) {
+
     sections.push(`
+# Handling Ambiguity
+When the task is ambiguous or has multiple valid approaches:
+1. Search the code or docs to gather context first
+2. Use askUser to let the user choose. Do NOT guess.
+3. Examples: "add auth" -> ask OAuth or JWT; "set up a db" -> ask Postgres or SQLite
+ 
+Specific tasks (with file paths, line numbers, or precise instructions) do not
+need askUser. Act directly.`);
+    if (ctx.projectContext) {
+        sections.push(`
 # Project Instructions (from AGENTS.md)
 ${ctx.projectContext}`);
     }

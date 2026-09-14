@@ -14,6 +14,7 @@ import { PARENT_TRUST } from "./lib/approved-mode/trust.ts";
 import { createReadTool } from "./lib/tools/read.ts";
 import { createTaskTool } from "./lib/tools/task.ts";
 import { createWriteTool } from "./lib/tools/write.ts";
+import { createAskUserTool } from "./lib/tools/ask.ts";
 
 const cwd = resolve(process.argv[2] || process.cwd());
 const projectContext = collectAgentsMd(cwd);
@@ -28,6 +29,7 @@ function readPackageScripts(dir: string): Record<string, string> {
     return {};
   }
 }
+
 
 const sandbox = await createSandboxByEnv(cwd);
 const lifecycle: SandboxLifecycle = {};
@@ -45,6 +47,7 @@ try {
     sandbox,
     createApproval({ mode: "interactive" }),
   );
+  const askUser = createAskUserTool();
 
   const tools = {
     read,
@@ -56,6 +59,7 @@ try {
       depth: 0,
       parentRole: "orchestrator",
     }),
+    askUser,
   };
 
   const instructions = buildSystemPrompt({
