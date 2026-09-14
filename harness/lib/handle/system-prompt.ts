@@ -72,6 +72,26 @@ When the task is ambiguous or has multiple valid approaches:
  
 Specific tasks (with file paths, line numbers, or precise instructions) do not
 need askUser. Act directly.`);
+
+
+sections.push(`
+# Task Planning
+
+For multi-step tasks, you MUST use the todo tool before making changes.
+
+Use todo when:
+- the task has 3 or more distinct steps,
+- the task modifies multiple files,
+- or later steps depend on earlier steps.
+
+Required workflow:
+1. Add all planned tasks first.
+2. Start exactly one task.
+3. Complete it before starting the next.
+4. Never have more than one task in_progress.
+
+Do not use todo for simple questions, trivial single-file fixes, or exploratory reads.
+`);
     if (ctx.projectContext) {
         sections.push(`
 # Project Instructions (from AGENTS.md)

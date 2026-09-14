@@ -15,6 +15,7 @@ import { createReadTool } from "./lib/tools/read.ts";
 import { createTaskTool } from "./lib/tools/task.ts";
 import { createWriteTool } from "./lib/tools/write.ts";
 import { createAskUserTool } from "./lib/tools/ask.ts";
+import { createTodoTool } from "./lib/tools/todo.ts";
 
 const cwd = resolve(process.argv[2] || process.cwd());
 const projectContext = collectAgentsMd(cwd);
@@ -48,6 +49,7 @@ try {
     createApproval({ mode: "interactive" }),
   );
   const askUser = createAskUserTool();
+  const todo = createTodoTool();
 
   const tools = {
     read,
@@ -60,6 +62,7 @@ try {
       parentRole: "orchestrator",
     }),
     askUser,
+    todo,
   };
 
   const instructions = buildSystemPrompt({
@@ -68,7 +71,11 @@ try {
     toolNames: Object.keys(tools),
     scripts: readPackageScripts(cwd),
     projectContext,
+    
   });
+
+  console.error(`System prompt:\n${instructions}\n`);
+  console.error(Object.keys(tools));
 
   const agent = new ToolLoopAgent({
     model,
