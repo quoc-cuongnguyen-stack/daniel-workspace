@@ -25,8 +25,10 @@ export function buildSystemPrompt(ctx: PromptContext): string {
 - USE your tools. Read files, search code, run commands, then answer.
 - Do NOT explain what you WOULD do. Actually do it.${taskRouting}
 - Prefer grep for searching, read for viewing files.
-- Use bash only for commands that aren't covered by other tools.
-- Available tools: ${ctx.toolNames.join(", ")}`);
+- Available tools: ${ctx.toolNames.join(", ")}
+-Search before reading. Use grep first, then read only what you'll change.
+- Don't read files "just in case." Read what you need when you need it.
+`);
 
     if (ctx.gitBranch) {
         sections.push(`- Current branch: ${ctx.gitBranch}`);

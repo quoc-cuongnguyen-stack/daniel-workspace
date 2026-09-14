@@ -74,9 +74,6 @@ try {
     
   });
 
-  console.error(`System prompt:\n${instructions}\n`);
-  console.error(Object.keys(tools));
-
   const agent = new ToolLoopAgent({
     model,
     instructions,
