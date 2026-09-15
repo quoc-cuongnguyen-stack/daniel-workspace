@@ -20,15 +20,29 @@ export function buildSystemPrompt(ctx: PromptContext): string {
 - When the user says delegate, call task. Do not do that research or those edits with grep, read, or write yourself.`
         : "";
 
+    const surveyRouting = ctx.toolNames.includes("survey")
+        ? `
+- For architectural questions ("how is X handled", "where does Y live"), call survey first, then read only the listed files.`
+        : "";
+
     sections.push(`
 # Agency
 - USE your tools. Read files, search code, run commands, then answer.
-- Do NOT explain what you WOULD do. Actually do it.${taskRouting}
+- Do NOT explain what you WOULD do. Actually do it.${taskRouting}${surveyRouting}
 - Prefer grep for searching, read for viewing files.
 - Available tools: ${ctx.toolNames.join(", ")}
--Search before reading. Use grep first, then read only what you'll change.
+- Search before reading. Use grep first, then read only what you'll change.
 - Don't read files "just in case." Read what you need when you need it.
 `);
+
+    if (ctx.toolNames.includes("survey")) {
+        sections.push(`
+# Fast context
+- Named file path in the prompt -> read directly. Do not survey.
+- Grep-able symbol or regex -> grep first. Do not survey.
+- Architecture or "where does X live" -> survey first, then read listed files.
+- Do not call task just to map files; use survey for file maps.`);
+    }
 
     if (ctx.gitBranch) {
         sections.push(`- Current branch: ${ctx.gitBranch}`);
@@ -139,5 +153,23 @@ ${ctx.projectContext}`);
     const withoutTask = buildSystemPrompt(base);
     if (withoutTask.includes("When the user says delegate, call task.")) {
         throw new Error("task routing should be absent without the task tool");
+    }
+
+    const withSurvey = buildSystemPrompt({
+        ...base,
+        toolNames: ["read", "grep", "survey"],
+    });
+    if (!withSurvey.includes("call survey first")) {
+        throw new Error("expected survey routing when survey is available");
+    }
+    if (!withSurvey.includes("# Fast context")) {
+        throw new Error("expected Fast context section when survey is available");
+    }
+    const withoutSurvey = buildSystemPrompt(base);
+    if (withoutSurvey.includes("call survey first")) {
+        throw new Error("survey routing should be absent without the survey tool");
+    }
+    if (withoutSurvey.includes("# Fast context")) {
+        throw new Error("Fast context should be absent without the survey tool");
     }
 }

@@ -15,6 +15,7 @@ import { createReadTool } from "./lib/tools/read.ts";
 import { createTaskTool } from "./lib/tools/task.ts";
 import { createWriteTool } from "./lib/tools/write.ts";
 import { createAskUserTool } from "./lib/tools/ask.ts";
+import { createSurveyTool } from "./lib/tools/survey.ts";
 import { createTodoTool } from "./lib/tools/todo.ts";
 
 const cwd = resolve(process.argv[2] || process.cwd());
@@ -49,6 +50,7 @@ try {
     createApproval({ mode: "interactive" }),
   );
   const askUser = createAskUserTool();
+  const survey = createSurveyTool(sandbox, { read, grep });
   const todo = createTodoTool();
 
   const tools = {
@@ -62,6 +64,7 @@ try {
       parentRole: "orchestrator",
     }),
     askUser,
+    survey,
     todo,
   };
 

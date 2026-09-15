@@ -17,4 +17,5 @@ When asked which Vercel Academy lesson introduced a `tool()` call, use this map.
 - `bash` — 1.3 Completing the Toolbox / 2.2 Shell Execution
 - `write` — 1–2 Completing the Toolbox
 - `task` — 6.2 Explorer / 6.3 Executor
+- `survey` — 9.2 Fast Context Understanding (when grep isn't enough)
 
