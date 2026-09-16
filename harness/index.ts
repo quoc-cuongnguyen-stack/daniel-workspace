@@ -1,5 +1,4 @@
 import { ToolLoopAgent, pruneMessages, stepCountIs } from "ai";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { addCacheControl } from "./lib/cache.ts";
 import { createModel } from "./lib/model.ts";
@@ -17,23 +16,17 @@ import { createWriteTool } from "./lib/tools/write.ts";
 import { createAskUserTool } from "./lib/tools/ask.ts";
 import { createSurveyTool } from "./lib/tools/survey.ts";
 import { createTodoTool } from "./lib/tools/todo.ts";
+import { discoverGates } from "./lib/verification.ts";
 
-const cwd = resolve(process.argv[2] || process.cwd());
+const args = process.argv.slice(2).filter((arg) => arg !== "--");
+const cwd = resolve(args[0] || process.cwd());
 const projectContext = collectAgentsMd(cwd);
-
-function readPackageScripts(dir: string): Record<string, string> {
-  try {
-    const pkg = JSON.parse(readFileSync(resolve(dir, "package.json"), "utf-8")) as {
-      scripts?: Record<string, string>;
-    };
-    return pkg.scripts ?? {};
-  } catch {
-    return {};
-  }
-}
-
-
 const sandbox = await createSandboxByEnv(cwd);
+const verificationCommands = await discoverGates(sandbox);
+const approval = createApproval({ mode: "interactive" });
+for (const command of verificationCommands) {
+  approval.remember(command);
+}
 const lifecycle: SandboxLifecycle = {};
 
 console.error(`Sandbox: ${sandbox.type}`);
@@ -45,10 +38,7 @@ try {
   const read = createReadTool(sandbox);
   const grep = createGrepTool(sandbox);
   const write = createWriteTool(sandbox as WritableSandbox);
-  const bash = createBashTool(
-    sandbox,
-    createApproval({ mode: "interactive" }),
-  );
+  const bash = createBashTool(sandbox, approval);
   const askUser = createAskUserTool();
   const survey = createSurveyTool(sandbox, { read, grep });
   const todo = createTodoTool();
@@ -69,12 +59,11 @@ try {
   };
 
   const instructions = buildSystemPrompt({
-    workingDirectory: sandbox.workingDirectory,
+    workingDirectory: cwd,
     sandboxType: sandbox.type,
     toolNames: Object.keys(tools),
-    scripts: readPackageScripts(cwd),
     projectContext,
-    
+    verificationCommands,
   });
 
   const agent = new ToolLoopAgent({
@@ -109,7 +98,7 @@ try {
     }),
   });
 
-  const prompt = process.argv.slice(3).join(" ") || "Hello!";
+  const prompt = args.slice(1).join(" ") || "Hello!";
   const { text, steps } = await agent.generate({ prompt });
   console.log(text);
   console.log(`\n(${steps.length} steps)`);

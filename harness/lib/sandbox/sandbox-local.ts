@@ -3,23 +3,23 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { WritableSandbox } from "./sandbox.ts";
 
-export function createLocalSandbox(dir: string): WritableSandbox {
+export function createLocalSandbox(workingDir: string): WritableSandbox {
   let inFlight: Promise<{ snapshotId: string }> | null = null;
   let stopped = false;
 
   return {
     type: "local",
-    workingDirectory: dir,
-    readFile: async (p) => readFileSync(resolve(dir, p), "utf-8"),
+    workingDirectory: workingDir,
+    readFile: async (p) => readFileSync(resolve(workingDir, p), "utf-8"),
     writeFile: async (p, content) => {
-      const abs = resolve(dir, p);
+      const abs = resolve(workingDir, p);
       mkdirSync(dirname(abs), { recursive: true });
       writeFileSync(abs, content, "utf-8");
     },
     exec: async (command) => {
       try {
         const stdout = execSync(command, {
-          cwd: dir,
+          cwd: workingDir,
           encoding: "utf-8",
           timeout: 30_000,
         });

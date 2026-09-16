@@ -4,13 +4,15 @@ export interface PromptContext {
     toolNames: string[];
     gitBranch?: string;
     projectContext?: string;
-    scripts?: Record<string, string>;
+    verificationCommands?: string[];
 }
-
-const VERIFY_SCRIPTS = ["typecheck", "lint", "test", "build"] as const;
 
 export function buildSystemPrompt(ctx: PromptContext): string {
     const sections: string[] = [];
+
+    const gates = ctx.verificationCommands?.length
+        ? ctx.verificationCommands.map((c, i) => `${i + 1}. \`${c}\``).join("\n")
+        : "(no verification commands discovered for this project)";
 
     sections.push(`You are a coding agent working in: ${ctx.workingDirectory}`);
     sections.push(`Sandbox: ${ctx.sandboxType}`);
@@ -54,29 +56,23 @@ export function buildSystemPrompt(ctx: PromptContext): string {
 - Search before creating, and reuse existing patterns
 - No new dependencies without asking`);
 
-    const verify = VERIFY_SCRIPTS.filter((name) => ctx.scripts?.[name]);
-    const steps =
-        verify.length === 0
-            ? "This project has no typecheck, lint, test, or build scripts. Do not invent those checks."
-            : verify
-                .map(
-                    (name, i) =>
-                        `${i + 1}. Run \`pnpm ${name}\` (scripts.${name} is defined)`,
-                )
-                .join("\n");
 
     sections.push(`
 # Verification
-After making changes, verify your work:
-1. Run \`npx tsc --noEmit\` when TypeScript is present
-2. Run lint, test, or build commands only if they exist in this project and are allowed by the current approval mode
-3. Report exactly what you ran, what was blocked, and what was unavailable
-4. Do NOT inflate partial verification into a blanket success claim
-${steps}
+After making changes, verify your work by running these gates in order:
+${gates}
+ 
+Call bash for each listed gate immediately. Do not ask the user for
+permission, and do not use askUser for verification.
 
-Do NOT claim "tests pass" without running them.
-Scope your claims honestly. "Verification was limited because writes were blocked" is honest.
-"All tests pass" when you didn't run them is not.`);
+Run each gate, capture the output, and report what passed and what didn't.
+ 
+Distinguish failures you caused from failures that were already there:
+- "Ran tsc: passed."
+- "Ran npm test: 47 passed, 3 failed. The 3 failures are pre-existing in user.test.ts and unrelated to my changes."
+ 
+Do NOT claim "tests pass" without running them. Do NOT inflate partial
+verification into a blanket success claim.`);
 
 
     sections.push(`
@@ -90,7 +86,7 @@ Specific tasks (with file paths, line numbers, or precise instructions) do not
 need askUser. Act directly.`);
 
 
-sections.push(`
+    sections.push(`
 # Task Planning
 
 For multi-step tasks, you MUST use the todo tool before making changes.
@@ -132,15 +128,26 @@ ${ctx.projectContext}`);
         throw new Error("gitBranch line should be absent");
     }
 
-    const withTypecheck = buildSystemPrompt({
+    const withGates = buildSystemPrompt({
         ...base,
-        scripts: { typecheck: "tsc --noEmit", start: "bun run index.ts" },
+        verificationCommands: ["npm run typecheck"],
     });
-    if (!withTypecheck.includes("scripts.typecheck")) {
-        throw new Error("expected scripts.typecheck in Verification");
+    if (!withGates.includes("`npm run typecheck`")) {
+        throw new Error("expected discovered typecheck gate in Verification");
     }
-    if (withTypecheck.includes("scripts.lint") || withTypecheck.includes("pnpm lint")) {
-        throw new Error("lint must not appear when scripts.lint is missing");
+    if (withGates.includes("npm run lint") || withGates.includes("pnpm lint")) {
+        throw new Error("lint must not appear when it was not discovered");
+    }
+    if (!withGates.includes("Distinguish failures you caused from failures that were already there")) {
+        throw new Error("expected scoped-claims rule in Verification");
+    }
+    if (!withGates.includes("Call bash for each listed gate immediately")) {
+        throw new Error("expected bash-now rule in Verification");
+    }
+
+    const withoutGates = buildSystemPrompt(base);
+    if (!withoutGates.includes("(no verification commands discovered for this project)")) {
+        throw new Error("expected empty-gates fallback in Verification");
     }
 
     const withTask = buildSystemPrompt({
