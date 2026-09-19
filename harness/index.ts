@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
 import { ToolLoopAgent, pruneMessages, stepCountIs } from "ai";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { addCacheControl } from "./lib/cache.ts";
 import { createModel } from "./lib/model.ts";
 import { collectAgentsMd } from "./lib/rules/agents-md.ts";
@@ -19,6 +19,9 @@ import { createTaskTool } from "./lib/tools/task.ts";
 import { createTodoTool } from "./lib/tools/todo.ts";
 import { createWriteTool } from "./lib/tools/write.ts";
 import { discoverGates } from "./lib/verification.ts";
+import { discoverSkills } from "./lib/skills/skills.ts";
+import { createLoadSkillTool } from "./lib/tools/skill.ts";
+
 
 const { values, positionals } = parseArgs({
   args: process.argv.slice(2).filter((arg) => arg !== "--"),
@@ -29,8 +32,14 @@ const { values, positionals } = parseArgs({
   allowPositionals: true,
 });
 
+
 const cwd = resolve(positionals[0] || process.cwd());
 const prompt = positionals.slice(1).join(" ") || "Hello!";
+
+const skillDirs = [
+  join(cwd, "skills"),
+  join(process.env.HOME ?? "", ".harness", "skills"),
+];
 
 async function sandboxFromFlag(name: string, dir: string): Promise<Sandbox> {
   if (name === "just-bash") return createJustBashSandbox(dir);
@@ -56,7 +65,9 @@ const read = createReadTool(sandbox);
 const grep = createGrepTool(sandbox);
 const write = createWriteTool(sandbox as WritableSandbox);
 const bash = createBashTool(sandbox, approval);
+const skills = discoverSkills(skillDirs);
 const tools = {
+  loadSkill: createLoadSkillTool(skills),
   read,
   grep,
   write,
@@ -79,6 +90,7 @@ const agent = new ToolLoopAgent({
     toolNames: Object.keys(tools),
     projectContext,
     verificationCommands,
+    skills: skills.map((s) => ({ name: s.name, description: s.description }))
   }),
   tools,
   stopWhen: stepCountIs(15),

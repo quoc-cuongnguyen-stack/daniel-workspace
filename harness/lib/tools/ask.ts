@@ -5,7 +5,7 @@ export function createAskUserTool() {
     return tool({
         description: `Ask the user a multiple-choice question.
     WHEN TO USE: scoping ambiguous tasks, choosing between approaches, resolving a missing detail before acting.
-    WHEN NOT TO USE: you already have enough context to proceed.
+    WHEN NOT TO USE: you already have enough context to proceed; a listed skill applies and you have not called loadSkill yet.
     DO NOT USE FOR: rhetorical questions or progress updates.`,
         inputSchema: z.object({
             question: z.string().describe("The question to ask the user"),

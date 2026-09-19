@@ -1,3 +1,4 @@
+
 export interface PromptContext {
     workingDirectory: string;
     sandboxType: string;
@@ -5,6 +6,7 @@ export interface PromptContext {
     gitBranch?: string;
     projectContext?: string;
     verificationCommands?: string[];
+    skills?: { name: string; description: string }[];
 }
 
 export function buildSystemPrompt(ctx: PromptContext): string {
@@ -27,13 +29,22 @@ export function buildSystemPrompt(ctx: PromptContext): string {
 - For architectural questions ("how is X handled", "where does Y live"), call survey first, then read only the listed files.`
         : "";
 
+    const skillRouting = ctx.toolNames.includes("loadSkill") && ctx.skills?.length
+        ? `
+- When the task names a skill or matches a listed skill, call loadSkill first, before read, grep, survey, or askUser. Do not search for SKILL.md or skills-lock.json.`
+        : "";
+
+    const searchRouting = ctx.skills?.length
+        ? " If a listed skill applies, call loadSkill before searching."
+        : "";
+
     sections.push(`
 # Agency
 - USE your tools. Read files, search code, run commands, then answer.
-- Do NOT explain what you WOULD do. Actually do it.${taskRouting}${surveyRouting}
+- Do NOT explain what you WOULD do. Actually do it.${taskRouting}${surveyRouting}${skillRouting}
 - Prefer grep for searching, read for viewing files.
 - Available tools: ${ctx.toolNames.join(", ")}
-- Search before reading. Use grep first, then read only what you'll change.
+- Search before reading. Use grep first, then read only what you'll change.${searchRouting}
 - Don't read files "just in case." Read what you need when you need it.
 `);
 
@@ -56,6 +67,16 @@ export function buildSystemPrompt(ctx: PromptContext): string {
 - Search before creating, and reuse existing patterns
 - No new dependencies without asking`);
 
+    if (ctx.skills?.length) {
+        const lines = ctx.skills
+            .map((s) => `- ${s.name}: ${s.description}`)
+            .join("\n");
+        sections.push(`
+# Skills
+The following skills are available. Call \`loadSkill\` with the name to get full content.
+You MUST call loadSkill before read, grep, or askUser when a listed skill applies.
+${lines}`);
+    }
 
     sections.push(`
 # Verification
@@ -78,11 +99,12 @@ verification into a blanket success claim.`);
     sections.push(`
 # Handling Ambiguity
 When the task is ambiguous or has multiple valid approaches:
-1. Search the code or docs to gather context first
-2. Use askUser to let the user choose. Do NOT guess.
-3. Examples: "add auth" -> ask OAuth or JWT; "set up a db" -> ask Postgres or SQLite
+1. If a listed skill applies, call loadSkill first. Do not ask yet.
+2. Search the code or docs to gather context
+3. Use askUser to let the user choose. Do NOT guess.
+4. Examples: "add auth" -> loadSkill if an auth skill is listed, otherwise ask OAuth or JWT; "set up a db" -> ask Postgres or SQLite
  
-Specific tasks (with file paths, line numbers, or precise instructions) do not
+Specific tasks (named skills, file paths, line numbers, or precise instructions) do not
 need askUser. Act directly.`);
 
 
@@ -104,6 +126,7 @@ Required workflow:
 
 Do not use todo for simple questions, trivial single-file fixes, or exploratory reads.
 `);
+
     if (ctx.projectContext) {
         sections.push(`
 # Project Instructions (from AGENTS.md)
@@ -178,5 +201,39 @@ ${ctx.projectContext}`);
     }
     if (withoutSurvey.includes("# Fast context")) {
         throw new Error("Fast context should be absent without the survey tool");
+    }
+
+    const withSkills = buildSystemPrompt({
+        ...base,
+        toolNames: ["read", "loadSkill"],
+        skills: [{ name: "auth-patterns", description: "auth conventions" }],
+    });
+    if (!withSkills.includes("# Skills")) {
+        throw new Error("expected Skills section when skills are listed");
+    }
+    if (!withSkills.includes("- auth-patterns: auth conventions")) {
+        throw new Error("expected skill name and description in the Skills section");
+    }
+    if (!withSkills.includes("call loadSkill first")) {
+        throw new Error("expected loadSkill routing when skills are listed");
+    }
+    if (!withSkills.includes("MUST call loadSkill")) {
+        throw new Error("expected mandatory loadSkill instruction in Skills section");
+    }
+    if (withSkills.indexOf("# Skills") > withSkills.indexOf("# Handling Ambiguity")) {
+        throw new Error("Skills section should appear before Handling Ambiguity");
+    }
+    if (!withSkills.includes("If a listed skill applies, call loadSkill first")) {
+        throw new Error("expected Handling Ambiguity to defer to loadSkill");
+    }
+    const withoutSkills = buildSystemPrompt({
+        ...base,
+        toolNames: ["read", "loadSkill"],
+    });
+    if (withoutSkills.includes("# Skills")) {
+        throw new Error("Skills section should be absent without skills");
+    }
+    if (withoutSkills.includes("When the task names a skill or matches a listed skill")) {
+        throw new Error("loadSkill routing should be absent without skills");
     }
 }

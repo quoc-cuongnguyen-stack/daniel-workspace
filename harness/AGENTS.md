@@ -18,4 +18,5 @@ When asked which Vercel Academy lesson introduced a `tool()` call, use this map.
 - `write` — 1–2 Completing the Toolbox
 - `task` — 6.2 Explorer / 6.3 Executor
 - `survey` — 9.2 Fast Context Understanding (when grep isn't enough)
+- `loadSkill` — 11.1 Skills System
 
