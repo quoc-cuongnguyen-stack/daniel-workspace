@@ -19,6 +19,7 @@ export interface ToolRegistry {
     getTool(name: string): Tool | undefined;
     listTools(): string[];
     entries(): [string, Tool][];
+    hasTool(name: string): boolean;
 }
 
 interface WrapHooks {
@@ -52,9 +53,68 @@ export function createRegistry(): ToolRegistry {
         getTool: (name) => tools.get(name),
         listTools: () => [...tools.keys()],
         entries: () => [...tools.entries()],
+        hasTool: (name) => tools.has(name),
     };
 }
 
+export const ORCHESTRATOR_TOOL_NAMES = [
+    "read",
+    "grep",
+    "survey",
+    "task",
+    "todo",
+    "askUser",
+    "loadSkill",
+] as const;
+
+export const EXECUTOR_TOOL_NAMES = [
+    "read",
+    "grep",
+    "write",
+    "bash",
+] as const;
+
+type RegisterOptions = {
+    runId: string;
+    verificationCommands?: string[];
+};
+
+export function registerOrchestratorTools(
+    registry: ToolRegistry,
+    sandbox: Sandbox,
+    skills: Skill[],
+    options: RegisterOptions,
+) {
+    const read = createReadTool(sandbox);
+    const grep = createGrepTool(sandbox);
+    const write = createWriteTool(sandbox as WritableSandbox);
+
+    registry.registerTool("read", read);
+    registry.registerTool("grep", grep);
+    registry.registerTool(
+        "task",
+        createTaskTool(
+            sandbox,
+            { read, grep, write },
+            {
+                trust: PARENT_TRUST,
+                depth: 0,
+                parentRole: "orchestrator",
+                runId: options.runId,
+                verificationCommands: options.verificationCommands ?? [],
+            },
+        ),
+    );
+    registry.registerTool("askUser", createAskUserTool());
+    registry.registerTool("todo", createTodoTool());
+    registry.registerTool(
+        "survey",
+        createSurveyTool(sandbox, { read, grep }, options.runId),
+    );
+    registry.registerTool("loadSkill", createLoadSkillTool(skills));
+}
+
+/** @deprecated use registerOrchestratorTools for Claude multi-role routing */
 export function registerBuiltins(
     registry: ToolRegistry,
     sandbox: Sandbox,
@@ -72,11 +132,16 @@ export function registerBuiltins(
     registry.registerTool("bash", bash);
     registry.registerTool(
         "task",
-        createTaskTool(sandbox, { read, grep, write }, {
-            trust: PARENT_TRUST,
-            depth: 0,
-            parentRole: "orchestrator",
-        }),
+        createTaskTool(
+            sandbox,
+            { read, grep, write },
+            {
+                trust: PARENT_TRUST,
+                depth: 0,
+                parentRole: "orchestrator",
+                runId: "legacy",
+            },
+        ),
     );
     registry.registerTool("askUser", createAskUserTool());
     registry.registerTool("survey", createSurveyTool(sandbox, { read, grep }));

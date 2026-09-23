@@ -2,6 +2,7 @@ import { z } from "zod";
 import { shQuote } from "../handle/sh-quote.ts";
 import type { Sandbox } from "../sandbox/sandbox.ts";
 import { tool } from "ai";
+import { traceToolActivity } from "../handle/tool-trace.ts";
 import { resolveToolCaps, type ToolCaps } from "./caps.ts";
 
 export function createGrepTool(sandbox: Sandbox, caps?: Partial<ToolCaps>) {
@@ -47,7 +48,7 @@ EXAMPLES:
       path?: string;
       glob?: string;
     }) => {
-      console.error(
+      traceToolActivity(
         `[tool] grep pattern=${pattern} path=${searchPath ?? "."} glob=${glob ?? ""}`,
       );
       let cmd = `grep -rn --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.pnpm-store --exclude-dir=.codegraph`;

@@ -1,6 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { readFileSync } from "node:fs";
+import { traceToolActivity } from "../handle/tool-trace.ts";
 import type { Skill } from "../skills/skills.ts";
 
 // Lesson 11.1: Skills System
@@ -22,7 +23,7 @@ DO NOT search the repo for SKILL.md, skills-lock.json, or skill files. Call this
             name: z.string().describe("Skill name as listed in the Skills section"),
         }),
         execute: async ({ name }) => {
-            console.error(`[tool] loadSkill execute name=${name}`);
+            traceToolActivity(`[tool] loadSkill execute name=${name}`);
             const skill = byName.get(name);
             if (!skill) return `Unknown skill: ${name}`;
             const content = readFileSync(skill.path, "utf-8");

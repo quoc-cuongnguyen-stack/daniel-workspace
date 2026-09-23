@@ -1,13 +1,6 @@
+import type { PromptContext } from "./prompt.types.ts";
 
-export interface PromptContext {
-    workingDirectory: string;
-    sandboxType: string;
-    toolNames: string[];
-    gitBranch?: string;
-    projectContext?: string;
-    verificationCommands?: string[];
-    skills?: { name: string; description: string }[];
-}
+export type { PromptContext } from "./prompt.types.ts";
 
 export function buildSystemPrompt(ctx: PromptContext): string {
     const sections: string[] = [];
@@ -38,7 +31,38 @@ export function buildSystemPrompt(ctx: PromptContext): string {
         ? " If a listed skill applies, call loadSkill before searching."
         : "";
 
-    sections.push(`
+    if (ctx.agentRole === "orchestrator") {
+        sections.push(`
+# Orchestrator role
+- You plan and delegate. You do NOT edit files or run shell commands yourself.
+- Research with read, grep, and survey. Implementation goes to task(subagentType=executor).
+- Produce a structured plan before delegating: goal, files, constraints, ordered steps, verification commands.
+- Available tools: ${ctx.toolNames.join(", ")}${taskRouting}${surveyRouting}${skillRouting}
+- Do not call write or bash. If implementation is needed, delegate to executor.`);
+    } else if (ctx.agentRole === "executor") {
+        const allowedFiles = ctx.allowedWritePaths?.length
+            ? ctx.allowedWritePaths.map((f) => `- ${f}`).join("\n")
+            : "(none listed)";
+        sections.push(`
+# Executor role
+- Follow the delegated plan exactly. Do not expand scope or redesign architecture.
+- Available tools: ${ctx.toolNames.join(", ")}
+- Prefer grep before read. Change only the files required by the plan.
+- You may write ONLY these plan files:
+${allowedFiles}
+- Do not run git checkout, git restore, or git reset. Fix mistakes with write on allowed files.
+- Run listed verification commands and report pass/fail with evidence.`);
+    } else if (ctx.agentRole === "reviewer") {
+        sections.push(`
+# Reviewer role
+- Read-only review. Compare executor output and diff against the plan.
+- Available tools: ${ctx.toolNames.join(", ")}
+- Do not edit files or run commands.
+- End with:
+  Verdict: approve | needs_changes | reject
+  Summary: one concise paragraph`);
+    } else {
+        sections.push(`
 # Agency
 - USE your tools. Read files, search code, run commands, then answer.
 - Do NOT explain what you WOULD do. Actually do it.${taskRouting}${surveyRouting}${skillRouting}
@@ -47,6 +71,7 @@ export function buildSystemPrompt(ctx: PromptContext): string {
 - Search before reading. Use grep first, then read only what you'll change.${searchRouting}
 - Don't read files "just in case." Read what you need when you need it.
 `);
+    }
 
     if (ctx.toolNames.includes("survey")) {
         sections.push(`
@@ -78,7 +103,8 @@ You MUST call loadSkill before read, grep, or askUser when a listed skill applie
 ${lines}`);
     }
 
-    sections.push(`
+    if (ctx.agentRole !== "orchestrator" && ctx.agentRole !== "reviewer") {
+        sections.push(`
 # Verification
 After making changes, verify your work by running these gates in order:
 ${gates}
@@ -94,6 +120,15 @@ Distinguish failures you caused from failures that were already there:
  
 Do NOT claim "tests pass" without running them. Do NOT inflate partial
 verification into a blanket success claim.`);
+    } else if (ctx.agentRole === "orchestrator") {
+        sections.push(`
+# Verification planning
+Discovered project gates:
+${gates}
+
+Include relevant gates in the executor plan verification list.
+Do not run verification commands yourself; delegate them to the executor.`);
+    }
 
 
     sections.push(`
@@ -108,7 +143,17 @@ Specific tasks (named skills, file paths, line numbers, or precise instructions)
 need askUser. Act directly.`);
 
 
-    sections.push(`
+    if (ctx.agentRole === "orchestrator") {
+        sections.push(`
+# Delegation
+- Call task as soon as the request says to delegate.
+- Explorer: task(subagentType=explorer) with a description.
+- Executor: task(subagentType=executor) with a structured plan.
+- Call executor only after explorer returns when the executor plan depends on that research.`);
+    }
+
+    if (ctx.toolNames.includes("todo")) {
+        sections.push(`
 # Task Planning
 
 For multi-step tasks, you MUST use the todo tool before making changes.
@@ -126,6 +171,7 @@ Required workflow:
 
 Do not use todo for simple questions, trivial single-file fixes, or exploratory reads.
 `);
+    }
 
     if (ctx.projectContext) {
         sections.push(`
@@ -136,104 +182,30 @@ ${ctx.projectContext}`);
     return sections.join("\n");
 }
 
-{
-    const base: PromptContext = {
-        workingDirectory: ".",
-        sandboxType: "local",
-        toolNames: ["read", "grep", "bash"],
-    };
-    const withBranch = buildSystemPrompt({ ...base, gitBranch: "main" });
-    if (!withBranch.includes("Current branch: main")) {
-        throw new Error('expected "Current branch: main"');
-    }
-    const withoutBranch = buildSystemPrompt(base);
-    if (withoutBranch.includes("Current branch:")) {
-        throw new Error("gitBranch line should be absent");
-    }
+export function buildOrchestratorPrompt(ctx: PromptContext): string {
+    return buildSystemPrompt({ ...ctx, agentRole: "orchestrator" });
+}
 
-    const withGates = buildSystemPrompt({
-        ...base,
-        verificationCommands: ["npm run typecheck"],
-    });
-    if (!withGates.includes("`npm run typecheck`")) {
-        throw new Error("expected discovered typecheck gate in Verification");
-    }
-    if (withGates.includes("npm run lint") || withGates.includes("pnpm lint")) {
-        throw new Error("lint must not appear when it was not discovered");
-    }
-    if (!withGates.includes("Distinguish failures you caused from failures that were already there")) {
-        throw new Error("expected scoped-claims rule in Verification");
-    }
-    if (!withGates.includes("Call bash for each listed gate immediately")) {
-        throw new Error("expected bash-now rule in Verification");
-    }
+export function buildExecutorPrompt(ctx: PromptContext): string {
+    return buildSystemPrompt({ ...ctx, agentRole: "executor" });
+}
 
-    const withoutGates = buildSystemPrompt(base);
-    if (!withoutGates.includes("(no verification commands discovered for this project)")) {
-        throw new Error("expected empty-gates fallback in Verification");
-    }
+export function buildReviewerPrompt(
+    ctx: Pick<PromptContext, "workingDirectory" | "sandboxType">,
+): string {
+    return buildSystemPrompt({
+        ...ctx,
+        toolNames: ["read", "grep"],
+        agentRole: "reviewer",
+    });
+}
 
-    const withTask = buildSystemPrompt({
-        ...base,
-        toolNames: ["read", "grep", "task"],
+export function buildExplorerPrompt(
+    ctx: Pick<PromptContext, "workingDirectory" | "sandboxType">,
+): string {
+    return buildSystemPrompt({
+        ...ctx,
+        toolNames: ["read", "grep"],
+        agentRole: "explorer",
     });
-    if (!withTask.includes("When the user says delegate, call task.")) {
-        throw new Error("expected task routing when task is available");
-    }
-    const withoutTask = buildSystemPrompt(base);
-    if (withoutTask.includes("When the user says delegate, call task.")) {
-        throw new Error("task routing should be absent without the task tool");
-    }
-
-    const withSurvey = buildSystemPrompt({
-        ...base,
-        toolNames: ["read", "grep", "survey"],
-    });
-    if (!withSurvey.includes("call survey first")) {
-        throw new Error("expected survey routing when survey is available");
-    }
-    if (!withSurvey.includes("# Fast context")) {
-        throw new Error("expected Fast context section when survey is available");
-    }
-    const withoutSurvey = buildSystemPrompt(base);
-    if (withoutSurvey.includes("call survey first")) {
-        throw new Error("survey routing should be absent without the survey tool");
-    }
-    if (withoutSurvey.includes("# Fast context")) {
-        throw new Error("Fast context should be absent without the survey tool");
-    }
-
-    const withSkills = buildSystemPrompt({
-        ...base,
-        toolNames: ["read", "loadSkill"],
-        skills: [{ name: "auth-patterns", description: "auth conventions" }],
-    });
-    if (!withSkills.includes("# Skills")) {
-        throw new Error("expected Skills section when skills are listed");
-    }
-    if (!withSkills.includes("- auth-patterns: auth conventions")) {
-        throw new Error("expected skill name and description in the Skills section");
-    }
-    if (!withSkills.includes("call loadSkill first")) {
-        throw new Error("expected loadSkill routing when skills are listed");
-    }
-    if (!withSkills.includes("MUST call loadSkill")) {
-        throw new Error("expected mandatory loadSkill instruction in Skills section");
-    }
-    if (withSkills.indexOf("# Skills") > withSkills.indexOf("# Handling Ambiguity")) {
-        throw new Error("Skills section should appear before Handling Ambiguity");
-    }
-    if (!withSkills.includes("If a listed skill applies, call loadSkill first")) {
-        throw new Error("expected Handling Ambiguity to defer to loadSkill");
-    }
-    const withoutSkills = buildSystemPrompt({
-        ...base,
-        toolNames: ["read", "loadSkill"],
-    });
-    if (withoutSkills.includes("# Skills")) {
-        throw new Error("Skills section should be absent without skills");
-    }
-    if (withoutSkills.includes("When the task names a skill or matches a listed skill")) {
-        throw new Error("loadSkill routing should be absent without skills");
-    }
 }

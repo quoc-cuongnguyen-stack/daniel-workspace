@@ -6,10 +6,15 @@ import { resolveToolCaps, type ToolCaps } from "./caps.ts";
 
 type NeedsApproval = ApprovalGate | ((input: { command: string }) => boolean);
 
+export type BashToolOptions = {
+  blockCommand?: (command: string) => string | null;
+};
+
 export function createBashTool(
   sandbox: Sandbox,
   approval: NeedsApproval,
   caps?: Partial<ToolCaps>,
+  options?: BashToolOptions,
 ) {
   const needsApproval =
     typeof approval === "function" ? approval : approval.needsApproval;
@@ -38,6 +43,10 @@ EXAMPLES:
       command: z.string().describe("Shell command to execute"),
     }),
     execute: async ({ command }) => {
+      const blocked = options?.blockCommand?.(command);
+      if (blocked) {
+        return blocked;
+      }
       if (needsApproval({ command })) {
         return `Blocked: "${command}" requires approval.`;
       }

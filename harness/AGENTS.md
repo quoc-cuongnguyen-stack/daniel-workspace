@@ -8,6 +8,42 @@ This package is the portable agent loop, not a product app.
 - Do not treat this file as product conventions. Do not invent `packages/`, bun scripts, or `I_` / `T_` / `E_` naming from this file.
 - When this directory is `project-cwd`, verify with `pnpm typecheck` and `pnpm lint` only if those scripts exist.
 
+# Claude multi-role mode
+
+Strict role split (default):
+
+- **Orchestrator (Sonnet)**: plan and delegate via `task`. Tools: read, grep, survey, task, todo, askUser, loadSkill.
+- **Explorer (Haiku)**: read-only research via `task(subagentType=explorer)`. Tools: read, grep.
+- **Executor (Sonnet)**: implement from a structured `plan` passed to `task(subagentType=executor)`. Tools: read, grep, write, bash.
+- **Reviewer (Opus)**: read-only post-check after executor runs verification and produces a diff summary.
+
+Configure in `harness/.env`. All four role models are **required**; harness fails fast if any is missing:
+
+```env
+ORCHESTRATOR_MODEL=anthropic/claude-sonnet-4-6
+EXPLORER_MODEL=anthropic/claude-haiku-4-5
+EXECUTOR_MODEL=anthropic/claude-sonnet-4-6
+REVIEWER_MODEL=anthropic/claude-opus-4-6
+HARNESS_CWD=/absolute/path/to/target-repo
+```
+
+To switch models, edit `.env` and restart the harness process. There are no hardcoded model defaults in code.
+
+Run harness from this directory:
+
+```bash
+pnpm install
+pnpm start -- "Implement the next step from plan.md"
+```
+
+Or pass cwd explicitly:
+
+```bash
+pnpm start -- /path/to/ssl "Analyze auth module and delegate implementation"
+```
+
+Audit logs: `<target-repo>/.harness/runs/<runId>.json`
+
 # Course tool lessons
 
 When asked which Vercel Academy lesson introduced a `tool()` call, use this map. Do not search `.icm/` or the web for lesson numbers.

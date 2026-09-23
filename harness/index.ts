@@ -1,32 +1,79 @@
 import { parseArgs } from "node:util";
-import { ToolLoopAgent, pruneMessages, stepCountIs, tool } from "ai";
+import { ToolLoopAgent, pruneMessages, stepCountIs } from "ai";
+import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { addCacheControl } from "./lib/cache.ts";
-import { createModel } from "./lib/model.ts";
+import { createRunId, logAuditEvent } from "./lib/audit/audit-log.ts";
+import { maybeAddCacheControl } from "./lib/cache.ts";
+import { buildOrchestratorPrompt } from "./lib/handle/system-prompt.ts";
+import { consumeAndRenderStream } from "./lib/handle/render-stream.ts";
+import { loadRoleModelSpecs, resolveModel } from "./lib/model.ts";
 import { collectAgentsMd } from "./lib/rules/agents-md.ts";
-import { createApproval } from "./lib/approved-mode/mode-approval.ts";
-import { buildSystemPrompt } from "./lib/handle/system-prompt.ts";
 import { createJustBashSandbox } from "./lib/sandbox/sandbox-just-bash.ts";
 import { createLocalSandbox } from "./lib/sandbox/sandbox-local.ts";
 import type { Sandbox } from "./lib/sandbox/sandbox.ts";
 import { discoverGates } from "./lib/verification.ts";
-import { createRegistry, registerBuiltins, wrapTool } from "./lib/tools/registry.ts";
+import { createRegistry, registerOrchestratorTools } from "./lib/tools/registry.ts";
 import { discoverSkills } from "./lib/skills/skills.ts";
-import { z } from "zod";
 
+const runId = createRunId();
 
 const { values, positionals } = parseArgs({
   args: process.argv.slice(2).filter((arg) => arg !== "--"),
   options: {
     sandbox: { type: "string", default: "local" },
-    model: { type: "string", default: "anthropic/claude-haiku-4-5" },
+    cwd: { type: "string" },
   },
   allowPositionals: true,
 });
 
+function resolveHarnessPaths(): { cwd: string; prompt: string } {
+  if (values.cwd) {
+    return {
+      cwd: resolve(values.cwd),
+      prompt: positionals.join(" ") || "Hello!",
+    };
+  }
 
-const cwd = resolve(positionals[0] || process.cwd());
-const prompt = positionals.slice(1).join(" ") || "Hello!";
+  if (positionals.length > 0) {
+    return {
+      cwd: resolve(positionals[0]),
+      prompt: positionals.slice(1).join(" ") || "Hello!",
+    };
+  }
+
+  const envCwd = process.env.HARNESS_CWD?.trim();
+  if (envCwd) {
+    return {
+      cwd: resolve(envCwd),
+      prompt: "Hello!",
+    };
+  }
+
+  return {
+    cwd: process.cwd(),
+    prompt: positionals.join(" ") || "Hello!",
+  };
+}
+
+const { cwd, prompt } = resolveHarnessPaths();
+
+if (!existsSync(cwd)) {
+  console.error(`Working directory does not exist: ${cwd}`);
+  console.error(
+    "Fix HARNESS_CWD in harness/.env, pass a valid path, or use --cwd.",
+  );
+  process.exit(1);
+}
+
+if (!process.env.HARNESS_LOG_DIR?.trim()) {
+  process.env.HARNESS_LOG_DIR = join(cwd, ".harness", "runs");
+}
+
+const roleModels = loadRoleModelSpecs();
+const orchestratorSpec = roleModels.orchestrator;
+const explorerSpec = roleModels.explorer;
+const executorSpec = roleModels.executor;
+const reviewerSpec = roleModels.reviewer;
 
 const skillDirs = [
   join(cwd, "skills"),
@@ -38,80 +85,56 @@ async function sandboxFromFlag(name: string, dir: string): Promise<Sandbox> {
   return createLocalSandbox(dir);
 }
 
-function modelIdFromFlag(flag: string): string {
-  const slash = flag.lastIndexOf("/");
-  return slash === -1 ? flag : flag.slice(slash + 1);
-}
+console.error("Harness run:", runId);
+console.error("Working directory:", cwd);
+console.error("Sandbox:", values.sandbox);
+console.error("Orchestrator:", orchestratorSpec);
+console.error("Explorer:", explorerSpec);
+console.error("Executor:", executorSpec);
+console.error("Reviewer:", reviewerSpec);
 
 const sandbox = await sandboxFromFlag(values.sandbox!, cwd);
-console.error(`Sandbox: ${sandbox.type}`);
 
 const projectContext = collectAgentsMd(cwd);
 const verificationCommands = await discoverGates(sandbox);
-const approval = createApproval({ mode: "interactive" });
-for (const command of verificationCommands) {
-  approval.remember(command);
-}
 
 const skills = discoverSkills(skillDirs);
 const registry = createRegistry();
-registerBuiltins(registry, sandbox, skills, approval);
+registerOrchestratorTools(registry, sandbox, skills, {
+  runId,
+  verificationCommands,
+});
 
-registry.registerTool("deploy", tool({
-  description: `Deploy the project to a target environment.
-  WHEN TO USE: pushing changes to staging or production.
-  WHEN NOT TO USE: testing changes (use bash with the test runner instead).`,
-  inputSchema: z.object({
-    environment: z.enum(["staging", "production"]),
-  }),
-  execute: async ({ environment }) => {
-    const { stdout } = await sandbox.exec(`vercel deploy --${environment}`);
-    return stdout;
-  },
-}));
-
-const baseBash = registry.getTool("bash")!;
-  registry.registerTool("bash", wrapTool(baseBash, {
-  beforeExecute: (input: { command: string }) => {
-    if (input.command.startsWith("bun test")) {
-      return { ...input, command: input.command + " --reporter=spec" };
-    }
-    return input;
-  },
-}));
-
-registry.registerTool("now", tool({
-  description: "Return the current timestamp",
-  inputSchema: z.object({}),
-  execute: async () => new Date().toISOString(),
-}));
+const { model: orchestratorModel, spec: orchestratorMeta } =
+  resolveModel(orchestratorSpec);
 
 const agent = new ToolLoopAgent({
-  model: createModel(modelIdFromFlag(values.model!)),
-  instructions: buildSystemPrompt({
+  model: orchestratorModel,
+  instructions: buildOrchestratorPrompt({
     workingDirectory: cwd,
     sandboxType: sandbox.type,
     toolNames: registry.listTools(),
+    agentRole: "orchestrator",
     projectContext,
     verificationCommands,
-    skills: skills.map((s) => ({ name: s.name, description: s.description }))
+    skills: skills.map((s) => ({ name: s.name, description: s.description })),
   }),
   tools: Object.fromEntries(registry.entries()),
   stopWhen: stepCountIs(15),
   prepareCall: async (options) => {
     const pruned = options.messages
       ? pruneMessages({
-        messages: options.messages,
-        toolCalls: "before-last-3-messages",
-      })
+          messages: options.messages,
+          toolCalls: "before-last-3-messages",
+        })
       : undefined;
     return {
       ...options,
-      messages: pruned ? addCacheControl(pruned) : undefined,
+      messages: pruned ? maybeAddCacheControl(pruned) : undefined,
     };
   },
   prepareStep: ({ messages }) => ({
-    messages: addCacheControl(
+    messages: maybeAddCacheControl(
       pruneMessages({
         messages,
         toolCalls: "before-last-3-messages",
@@ -119,8 +142,18 @@ const agent = new ToolLoopAgent({
     ),
   }),
   onStepFinish: ({ usage, stepNumber }) => {
+    logAuditEvent({
+      runId,
+      timestamp: new Date().toISOString(),
+      role: "orchestrator",
+      provider: orchestratorMeta.provider,
+      model: orchestratorMeta.modelId,
+      step: stepNumber,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+    });
     console.error(
-      `Step ${stepNumber}: ${usage.inputTokens} input, ${usage.outputTokens} output`,
+      `\nStep ${stepNumber}: ${usage.inputTokens} input, ${usage.outputTokens} output`,
     );
   },
 });
@@ -132,9 +165,24 @@ process.on("SIGINT", async () => {
 });
 
 try {
-  const { text, steps } = await agent.generate({ prompt });
-  console.log(text);
-  console.log(`\n(${steps.length} steps)`);
+  logAuditEvent({
+    runId,
+    timestamp: new Date().toISOString(),
+    role: "orchestrator",
+    provider: orchestratorMeta.provider,
+    model: orchestratorMeta.modelId,
+    message: sanitizePromptForLog(prompt),
+  });
+
+  const result = await agent.stream({ prompt });
+  await consumeAndRenderStream(result.fullStream);
+  const steps = await result.steps;
+  console.error(`(${steps.length} steps)`);
+  console.error(`Audit log: ${process.env.HARNESS_LOG_DIR}/${runId}.json`);
 } finally {
   await sandbox.stop();
+}
+
+function sanitizePromptForLog(text: string): string {
+  return text.length > 200 ? `${text.slice(0, 200)}…` : text;
 }

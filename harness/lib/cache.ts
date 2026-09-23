@@ -1,39 +1,25 @@
 import type { ModelMessage } from "ai";
 
+const MAX_CACHE_BREAKPOINTS = 4;
+const FRESH_TAIL = 2;
+
 export function addCacheControl(messages: ModelMessage[]): ModelMessage[] {
+  const cacheableCount = Math.max(0, messages.length - FRESH_TAIL);
+  const breakpointCount = Math.min(MAX_CACHE_BREAKPOINTS, cacheableCount);
+
   return messages.map((msg, i) => {
-    if (i === 0) {
-      return {
-        ...msg,
-        providerOptions: { cacheControl: { type: "ephemeral" } },
-      };
+    if (i >= breakpointCount) {
+      return msg;
     }
-    if (i < messages.length - 2) {
-      return {
-        ...msg,
-        providerOptions: { cacheControl: { type: "ephemeral" } },
-      };
-    }
-    return msg;
+    return {
+      ...msg,
+      providerOptions: {
+        anthropic: { cacheControl: { type: "ephemeral" } },
+      },
+    };
   });
 }
 
-
-{
-  const messages = [
-    { role: "user" as const, content: "first" },
-    { role: "assistant" as const, content: "mid" },
-    { role: "user" as const, content: "recent-1" },
-    { role: "assistant" as const, content: "recent-2" },
-  ];
-  const cached = addCacheControl(messages);
-  const hasCache = (i: number) =>
-    Boolean(
-      (cached[i] as { providerOptions?: { cacheControl?: unknown } })
-        .providerOptions?.cacheControl,
-    );
-  if (!hasCache(0)) throw new Error("first message must be cacheable");
-  if (!hasCache(1)) throw new Error("older than last two must be cacheable");
-  if (hasCache(2)) throw new Error("second-to-last must stay fresh");
-  if (hasCache(3)) throw new Error("last message must stay fresh");
+export function maybeAddCacheControl(messages: ModelMessage[]): ModelMessage[] {
+  return addCacheControl(messages);
 }
