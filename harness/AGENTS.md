@@ -17,6 +17,8 @@ Strict role split (default):
 - **Executor (Sonnet)**: implement from a structured `plan` passed to `task(subagentType=executor)`. Tools: read, grep, write, bash.
 - **Reviewer (Opus)**: read-only post-check after executor runs verification and produces a diff summary.
 
+Plan approval: with `HARNESS_PLAN_APPROVAL=interactive` (default), every `task(executor)` shows the plan, allowed write paths, and verification commands, then waits for `y/N` in the terminal. `N` asks for a reason and returns it to the orchestrator; the executor does not run. Explorer is never gated. Use `background` for CI.
+
 Configure in `harness/.env`. All four role models are **required**; harness fails fast if any is missing:
 
 ```env

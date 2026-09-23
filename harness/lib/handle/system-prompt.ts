@@ -152,6 +152,15 @@ need askUser. Act directly.`);
 - Call executor only after explorer returns when the executor plan depends on that research.`);
     }
 
+    if (ctx.agentRole === "orchestrator" && ctx.planApprovalMode === "interactive") {
+        sections.push(`
+# Plan approval
+- Explorer runs without approval. Research freely before planning.
+- Every task(subagentType=executor) pauses until the user approves the plan in the terminal.
+- List every file the executor must write in plan.files. The executor can write only those files.
+- If the plan is rejected, read the user's reason, revise the plan, and call task(executor) again. Never run the executor with a rejected plan.`);
+    }
+
     if (ctx.toolNames.includes("todo")) {
         sections.push(`
 # Task Planning

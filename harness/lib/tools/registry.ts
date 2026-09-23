@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { tool, type Tool } from "ai";
 import type { ApprovalGate } from "../approved-mode/mode-approval.ts";
+import type { PlanApprovalMode } from "../approved-mode/plan-approval.ts";
 import { PARENT_TRUST } from "../approved-mode/trust.ts";
 import type { Sandbox, WritableSandbox } from "../sandbox/sandbox.ts";
 import type { Skill } from "../skills/skills.ts";
@@ -77,6 +78,7 @@ export const EXECUTOR_TOOL_NAMES = [
 type RegisterOptions = {
     runId: string;
     verificationCommands?: string[];
+    planApprovalMode: PlanApprovalMode;
 };
 
 export function registerOrchestratorTools(
@@ -102,6 +104,7 @@ export function registerOrchestratorTools(
                 parentRole: "orchestrator",
                 runId: options.runId,
                 verificationCommands: options.verificationCommands ?? [],
+                planApprovalMode: options.planApprovalMode,
             },
         ),
     );

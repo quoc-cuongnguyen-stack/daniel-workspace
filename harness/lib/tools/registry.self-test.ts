@@ -14,7 +14,10 @@ export function runSelfTests(): void {
     exec: async () => ({ stdout: "", exitCode: 0 }),
     stop: async () => {},
   };
-  registerOrchestratorTools(registry, sandbox, [], { runId: "test" });
+  registerOrchestratorTools(registry, sandbox, [], {
+    runId: "test",
+    planApprovalMode: "background",
+  });
   if (registry.hasTool("write") || registry.hasTool("bash")) {
     throw new Error("orchestrator registry must not expose write or bash");
   }

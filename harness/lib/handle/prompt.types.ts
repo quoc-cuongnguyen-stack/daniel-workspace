@@ -1,3 +1,4 @@
+import type { PlanApprovalMode } from "../approved-mode/plan-approval.ts";
 import type { AgentRole } from "../model.types.ts";
 
 export interface PromptContext {
@@ -10,4 +11,5 @@ export interface PromptContext {
   verificationCommands?: string[];
   allowedWritePaths?: string[];
   skills?: { name: string; description: string }[];
+  planApprovalMode?: PlanApprovalMode;
 }

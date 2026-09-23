@@ -8,6 +8,7 @@ import {
 } from "ai";
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { resolvePlanApprovalMode } from "./lib/approved-mode/plan-approval.ts";
 import { createRunId, logAuditEvent } from "./lib/audit/audit-log.ts";
 import { maybeAddCacheControl } from "./lib/cache.ts";
 import { buildOrchestratorPrompt } from "./lib/handle/system-prompt.ts";
@@ -76,6 +77,7 @@ if (!process.env.HARNESS_LOG_DIR?.trim()) {
 }
 
 const roleModels = loadRoleModelSpecs();
+const planApprovalMode = resolvePlanApprovalMode(process.env);
 const orchestratorSpec = roleModels.orchestrator;
 const explorerSpec = roleModels.explorer;
 const executorSpec = roleModels.executor;
@@ -98,6 +100,7 @@ console.error("Orchestrator:", orchestratorSpec);
 console.error("Explorer:", explorerSpec);
 console.error("Executor:", executorSpec);
 console.error("Reviewer:", reviewerSpec);
+console.error("Plan approval:", planApprovalMode);
 
 const sandbox = await sandboxFromFlag(values.sandbox!, cwd);
 
@@ -109,6 +112,7 @@ const registry = createRegistry();
 registerOrchestratorTools(registry, sandbox, skills, {
   runId,
   verificationCommands,
+  planApprovalMode,
 });
 
 const { model: orchestratorModel, spec: orchestratorMeta } =
@@ -124,6 +128,7 @@ const agent = new ToolLoopAgent({
     projectContext,
     verificationCommands,
     skills: skills.map((s) => ({ name: s.name, description: s.description })),
+    planApprovalMode,
   }),
   tools: Object.fromEntries(registry.entries()),
   stopWhen: stepCountIs(15),

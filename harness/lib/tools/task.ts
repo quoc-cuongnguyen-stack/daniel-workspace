@@ -5,11 +5,18 @@ import {
     summarizeToolInput,
 } from "../audit/audit-log.ts";
 import { createApproval } from "../approved-mode/mode-approval.ts";
+import {
+    formatExecutorPlanPreview,
+    formatRejection,
+    promptExecutorPlanApproval,
+    type PlanApprovalMode,
+} from "../approved-mode/plan-approval.ts";
 import { inheritTrust } from "../approved-mode/trust.ts";
 import {
     formatPlanForExecutor,
     structuredPlanSchema,
     tryParseStructuredPlan,
+    type StructuredPlan,
 } from "../handoff/plan.ts";
 import { buildExecutorPrompt } from "../handle/system-prompt.ts";
 import { traceToolActivity } from "../handle/tool-trace.ts";
@@ -42,6 +49,7 @@ type Spawn = {
     parentRole?: string;
     runId: string;
     verificationCommands?: string[];
+    planApprovalMode?: PlanApprovalMode;
 };
 
 async function runVerification(
@@ -235,6 +243,8 @@ async function runExecutorWithReview(
     });
 
     return [
+        `[approved plan]\n${formatPlanForExecutor(plan)}`,
+        "",
         executorSummary,
         "",
         `[verification]\n${verification.summary}`,
@@ -243,6 +253,56 @@ async function runExecutorWithReview(
         "",
         `[review: ${verdict.verdict}]\n${verdict.summary}`,
     ].join("\n");
+}
+
+// Returns a message for the orchestrator when the executor must not run.
+async function gateExecutorPlan(
+    spawn: Spawn,
+    plan: StructuredPlan,
+): Promise<string | null> {
+    const mode = spawn.planApprovalMode ?? "background";
+    switch (mode) {
+        case "background":
+            return null;
+        case "interactive":
+            break;
+        default: {
+            const _exhaustive: never = mode;
+            return _exhaustive;
+        }
+    }
+
+    if (!process.stdin.isTTY || !process.stderr.isTTY) {
+        logPlanDecision(spawn, "rejected", "no TTY");
+        return "Plan approval requires an interactive terminal. Set HARNESS_PLAN_APPROVAL=background to run without approval.";
+    }
+
+    const decision = await promptExecutorPlanApproval(formatExecutorPlanPreview(plan));
+    if (decision.approved) {
+        logPlanDecision(spawn, "approved");
+        return null;
+    }
+    logPlanDecision(spawn, "rejected", decision.reason);
+    return formatRejection(decision.reason);
+}
+
+function logPlanDecision(
+    spawn: Spawn,
+    decision: "approved" | "rejected",
+    reason?: string,
+): void {
+    const spec = parseModelSpec(modelSpecForRole("orchestrator"));
+    logAuditEvent({
+        runId: spawn.runId,
+        timestamp: new Date().toISOString(),
+        role: "orchestrator",
+        provider: spec.provider,
+        model: spec.modelId,
+        tool: "task",
+        inputSummary: "executor plan approval",
+        decision,
+        message: reason?.trim() || undefined,
+    });
 }
 
 export function createTaskTool(
@@ -300,6 +360,11 @@ WHEN NOT TO USE: ambiguous requirements (use askUser),
 
                 if (!parsed.ok) {
                     return `Executor requires a valid structured plan. ${parsed.error}`;
+                }
+
+                const blocked = await gateExecutorPlan(spawn, parsed.plan);
+                if (blocked) {
+                    return blocked;
                 }
 
                 return runExecutorWithReview(

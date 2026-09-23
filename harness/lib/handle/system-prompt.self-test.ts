@@ -124,6 +124,17 @@ export function runSelfTests(): void {
   if (orchestrator.includes("Call bash for each listed gate immediately")) {
     throw new Error("orchestrator should not instruct bash verification");
   }
+  if (orchestrator.includes("# Plan approval")) {
+    throw new Error("Plan approval section should be absent without interactive mode");
+  }
+  const gatedOrchestrator = buildOrchestratorPrompt({
+    ...base,
+    toolNames: ["read", "grep", "task", "todo"],
+    planApprovalMode: "interactive",
+  });
+  if (!gatedOrchestrator.includes("Never run the executor with a rejected plan")) {
+    throw new Error("interactive plan approval should tell the orchestrator how to handle rejection");
+  }
 
   const executor = buildExecutorPrompt({
     ...base,
