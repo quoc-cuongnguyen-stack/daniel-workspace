@@ -1,5 +1,11 @@
+import { createInterface } from "node:readline/promises";
 import { parseArgs } from "node:util";
-import { ToolLoopAgent, pruneMessages, stepCountIs } from "ai";
+import {
+  type ModelMessage,
+  ToolLoopAgent,
+  pruneMessages,
+  stepCountIs,
+} from "ai";
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createRunId, logAuditEvent } from "./lib/audit/audit-log.ts";
@@ -174,13 +180,69 @@ try {
     message: sanitizePromptForLog(prompt),
   });
 
-  const result = await agent.stream({ prompt });
-  await consumeAndRenderStream(result.fullStream);
-  const steps = await result.steps;
-  console.error(`(${steps.length} steps)`);
+  const interactive = Boolean(process.stdin.isTTY);
+  if (interactive) {
+    console.error("(Session mode: type /quit to end.)");
+  }
+
+  let conversationMessages: ModelMessage[] | undefined;
+  let turn = 0;
+
+  while (true) {
+    turn += 1;
+    const result = conversationMessages
+      ? await agent.stream({ messages: conversationMessages })
+      : await agent.stream({ prompt });
+
+    await consumeAndRenderStream(result.fullStream);
+    const steps = await result.steps;
+    console.error(`(${steps.length} steps)`);
+
+    const response = await result.response;
+    conversationMessages = conversationMessages
+      ? [...conversationMessages, ...response.messages]
+      : [{ role: "user", content: prompt }, ...response.messages];
+
+    if (!interactive) {
+      break;
+    }
+
+    const nextLine = await readReplLine();
+    if (nextLine === null) {
+      break;
+    }
+    const trimmed = nextLine.trim();
+    if (trimmed === "/quit") {
+      break;
+    }
+    if (!trimmed) {
+      continue;
+    }
+
+    conversationMessages = [
+      ...conversationMessages,
+      { role: "user", content: trimmed },
+    ];
+  }
+
   console.error(`Audit log: ${process.env.HARNESS_LOG_DIR}/${runId}.json`);
+  if (interactive && turn > 0) {
+    console.error(`Session ended after ${turn} turn(s).`);
+  }
 } finally {
   await sandbox.stop();
+}
+
+async function readReplLine(): Promise<string | null> {
+  if (!process.stdin.isTTY || !process.stderr.isTTY) {
+    return null;
+  }
+  const rl = createInterface({ input: process.stdin, output: process.stderr });
+  try {
+    return await rl.question("> ");
+  } finally {
+    rl.close();
+  }
 }
 
 function sanitizePromptForLog(text: string): string {
