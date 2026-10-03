@@ -2,16 +2,8 @@ import { isAbsolute, relative, resolve } from "node:path";
 import z from "zod";
 import type { WritableSandbox } from "../sandbox/sandbox.ts";
 import { tool } from "ai";
-import { pathAllowedForWrite } from "./executor-loop.ts";
 
-export type WriteToolOptions = {
-  allowedPaths?: readonly string[];
-};
-
-export function createWriteTool(
-  sandbox: WritableSandbox,
-  options?: WriteToolOptions,
-) {
+export function createWriteTool(sandbox: WritableSandbox) {
   // Lesson 1–2: Completing the Toolbox
   return tool({
     description: `Write a file in the project. Overwrites if it exists. Returns the written path.
@@ -40,17 +32,6 @@ export function createWriteTool(
       const rel = relative(root, abs);
       if (rel.startsWith("..") || isAbsolute(rel)) {
         return `Blocked: path escapes working directory`;
-      }
-      if (options?.allowedPaths) {
-        if (options.allowedPaths.length === 0) {
-          return "Blocked: plan.files is empty; executor cannot write files.";
-        }
-        if (!pathAllowedForWrite(filePath, options.allowedPaths)) {
-          return (
-            `Blocked: ${filePath} is not in plan.files. ` +
-            `Allowed: ${options.allowedPaths.join(", ")}`
-          );
-        }
       }
       await sandbox.writeFile(filePath, content);
       return `Wrote ${filePath}`;

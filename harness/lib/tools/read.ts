@@ -2,7 +2,6 @@ import { isAbsolute, relative, resolve } from "node:path";
 import z from "zod";
 import type { Sandbox } from "../sandbox/sandbox.ts";
 import { tool } from "ai";
-import { traceToolActivity } from "../handle/tool-trace.ts";
 import { resolveToolCaps, type ToolCaps } from "./caps.ts";
 
 export function createReadTool(sandbox: Sandbox, caps?: Partial<ToolCaps>) {
@@ -52,7 +51,7 @@ EXAMPLES:
 
       const content = await sandbox.readFile(filePath);
       let lines = content.split("\n");
-      traceToolActivity(
+      console.error(
         `[tool] read execute path=${filePath} abs=${abs} lines=${lines.length}`,
       );
 

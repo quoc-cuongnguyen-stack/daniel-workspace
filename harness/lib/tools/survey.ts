@@ -1,12 +1,10 @@
 import { ToolLoopAgent, stepCountIs, tool } from "ai";
 import { z } from "zod";
-import { logAuditEvent } from "../audit/audit-log.ts";
 import {
-    modelSpecForRole,
-    resolveModel,
+    createModel,
+    DEFAULT_EXPLORER_MODEL,
 } from "../model.ts";
 import type { Sandbox } from "../sandbox/sandbox.ts";
-import { traceToolActivity } from "../handle/tool-trace.ts";
 import { createGrepTool } from "./grep.ts";
 import { createReadTool } from "./read.ts";
 
@@ -19,13 +17,12 @@ const SURVEY_READ_CAPS = { readLines: 80 };
 const SURVEY_GREP_CAPS = { grepMatches: 20 };
 const MAX_FILES = 12;
 
-function buildSurveyExplorer(sandbox: Sandbox, runId: string) {
+function buildSurveyExplorer(sandbox: Sandbox) {
     const read = createReadTool(sandbox, SURVEY_READ_CAPS);
     const grep = createGrepTool(sandbox, SURVEY_GREP_CAPS);
-    const { model, spec } = resolveModel(modelSpecForRole("explorer"));
 
     return new ToolLoopAgent({
-        model,
+        model: createModel(process.env.EXPLORER_MODEL ?? DEFAULT_EXPLORER_MODEL),
         instructions: `You are a survey explorer. Read-only.
 Working directory: ${sandbox.workingDirectory}
 Given the question, search then read only what you need.
@@ -35,26 +32,10 @@ Max ${MAX_FILES} files. No prose, no bullets, no headers.
 If nothing relevant, return: (no matching files)`,
         tools: { read, grep },
         stopWhen: stepCountIs(5),
-        onStepFinish: ({ usage, stepNumber }) => {
-            logAuditEvent({
-                runId,
-                timestamp: new Date().toISOString(),
-                role: "explorer",
-                provider: spec.provider,
-                model: spec.modelId,
-                step: stepNumber,
-                inputTokens: usage.inputTokens,
-                outputTokens: usage.outputTokens,
-            });
-        },
     });
 }
 
-export function createSurveyTool(
-    sandbox: Sandbox,
-    _parentTools: SurveyTools,
-    runId = "survey",
-) {
+export function createSurveyTool(sandbox: Sandbox, _parentTools: SurveyTools) {
     return tool({
         description: `Map a high-level architecture question to relevant files.
 Returns a list of paths with a one-line role for each.
@@ -74,8 +55,8 @@ DO NOT USE FOR: reading a known file, keyword search, or implementation work.`,
                 .describe("High-level architecture or cross-cutting question"),
         }),
         execute: async ({ question }) => {
-            traceToolActivity(`[tool] survey execute question=${question}`);
-            const agent = buildSurveyExplorer(sandbox, runId);
+            console.error(`[tool] survey execute question=${question}`);
+            const agent = buildSurveyExplorer(sandbox);
             try {
                 const { text, steps } = await agent.generate({ prompt: question });
                 const body = text?.trim() ?? "(no matching files)";

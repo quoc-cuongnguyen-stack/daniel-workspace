@@ -1,6 +1,5 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { traceToolActivity } from "../handle/tool-trace.ts";
 
 interface TodoItem {
     id: string;
@@ -36,7 +35,7 @@ DO NOT USE for:
             id: z.string().optional(),
         }),
         execute: async ({ action, description, id }) => {
-            traceToolActivity(
+            console.error(
         `[tool] todo execute action=${action} description=${description ?? ""} id=${id ?? ""}`,
             );
 
